@@ -1,0 +1,128 @@
+﻿// -----------------------------------------------------------------------
+// <copyright file="SCP049Handler.cs" company="Mistaken">
+// Copyright (c) Mistaken. All rights reserved.
+// </copyright>
+// -----------------------------------------------------------------------
+
+using System.Collections.Generic;
+using System.Linq;
+using Exiled.API.Features;
+using MEC;
+using Mistaken.API;
+using Mistaken.API.Diagnostics;
+using Mistaken.API.Extensions;
+using Mistaken.API.GUI;
+using UnityEngine;
+
+namespace Mistaken.BetterSCP.SCP049
+{
+    internal class SCP049Handler : Module
+    {
+        public SCP049Handler(PluginHandler p)
+            : base(p)
+        {
+            // plugin.RegisterTranslation("scp049_start_message", "<color=red><b><size=500%>UWAGA</size></b></color><br><br><br><br><br><br><size=90%>Rozgrywka jako <color=red>SCP 049</color> na tym serwerze jest zmodyfikowana, <color=red>SCP 049</color> posiada domyślnie dodatkowe <color=yellow>60</color> ahp, każdy <color=red>SCP 049-2</color> w zasięgu <color=yellow>10</color> metrów dodaje +<color=yellow>100</color> do max ahp, ahp regeneruje się z prędkością <color=yellow>20</color> na sekundę pod warunkiem że jest <color=yellow>bezpieczny</color>(w ciągu ostatnich <color=yellow>10</color> sekund nie otrzymał obrażeń)</size>");
+        }
+
+        public override string Name => nameof(SCP049Handler);
+
+        public override void OnEnable()
+        {
+            Exiled.Events.Handlers.Player.ChangingRole += this.Player_ChangingRole;
+            Exiled.Events.Handlers.Player.Died += this.Player_Died;
+
+            BetterSCP.SCPGUIHandler.SCPMessages[RoleType.Scp049] = "<color=red><b><size=500%>UWAGA</size></b></color><br><br><br><br><br><br><size=90%>Rozgrywka jako <color=red>SCP 049</color> na tym serwerze jest zmodyfikowana, <color=red>SCP 049</color> posiada domyślnie dodatkowe <color=yellow>60</color> ahp, każdy <color=red>SCP 049-2</color> w zasięgu <color=yellow>10</color> metrów dodaje +<color=yellow>100</color> do max ahp, ahp regeneruje się z prędkością <color=yellow>20</color> na sekundę pod warunkiem że jest <color=yellow>bezpieczny</color>(w ciągu ostatnich <color=yellow>10</color> sekund nie otrzymał obrażeń)</size>";
+        }
+
+        public override void OnDisable()
+        {
+            BetterSCP.SCPGUIHandler.SCPMessages.Remove(RoleType.Scp049);
+
+            Exiled.Events.Handlers.Player.ChangingRole -= this.Player_ChangingRole;
+            Exiled.Events.Handlers.Player.Died -= this.Player_Died;
+        }
+
+        private void Player_Died(Exiled.Events.EventArgs.DiedEventArgs ev)
+        {
+            if (ev.Killer?.Role == RoleType.Scp0492)
+            {
+                ev.Killer.Health += 100;
+                ev.Killer.MaxArtificialHealth += 100;
+                ev.Killer.ArtificialHealth += 100;
+                if (ev.Killer.MaxHealth < ev.Killer.Health)
+                    ev.Killer.Health = ev.Killer.MaxHealth;
+            }
+
+            /*else if (ev.Killer?.Role == RoleType.Scp049)
+            {
+                ev.Killer.ArtificialHealth += 50;
+            }*/
+        }
+
+        private void Player_ChangingRole(Exiled.Events.EventArgs.ChangingRoleEventArgs ev)
+        {
+            if (ev.IsAllowed && ev.NewRole == RoleType.Scp049)
+            {
+                Timing.RunCoroutine(this.UpdateInfo(ev.Player));
+                Timing.CallDelayed(1, () =>
+                {
+                    if (ev.IsAllowed && ev.NewRole == RoleType.Scp049 && ev.Player.Role == RoleType.Scp049)
+                    {
+                        SCP049Shield.Ini<SCP049Shield>(ev.Player);
+                        ev.Player.ArtificialHealth = 20f;
+                    }
+                });
+            }
+        }
+
+        private IEnumerator<float> UpdateInfo(Player scp049)
+        {
+            yield return Timing.WaitForSeconds(1);
+            while (scp049.IsConnected && scp049.Role == RoleType.Scp049)
+            {
+                try
+                {
+                    List<string> message = new List<string>();
+                    foreach (var ragdollObj in GameObject.FindObjectsOfType<Ragdoll>())
+                    {
+                        try
+                        {
+                            if (!ragdollObj.NetworkallowRecall)
+                                continue;
+
+                            if (ragdollObj.CurrentTime < 10f)
+                            {
+                                var distance = Vector3.Distance(scp049.Position, ragdollObj.transform.position);
+
+                                if (distance > 10)
+                                     continue;
+                                message.Add($"<color=yellow>{ragdollObj.Networkowner.FullName}</color> - <color=yellow>{Mathf.RoundToInt(distance)}</color>m away - <color=yellow>{Mathf.RoundToInt(10 - ragdollObj.CurrentTime)}</color>s");
+                            }
+                        }
+                        catch (System.Exception ex)
+                        {
+                            this.Log.Error("Internal");
+                            this.Log.Error(ex.Message);
+                            this.Log.Error(ex.StackTrace);
+                        }
+                    }
+
+                    if (message.Count != 0)
+                        scp049.SetGUI("scp049", PseudoGUIPosition.BOTTOM, $"Potential zombies:<br><br>{string.Join("<br>", message)}");
+                    else
+                        scp049.SetGUI("scp049", PseudoGUIPosition.BOTTOM, null);
+                }
+                catch (System.Exception ex)
+                {
+                    this.Log.Error("External");
+                    this.Log.Error(ex.Message);
+                    this.Log.Error(ex.StackTrace);
+                }
+
+                yield return Timing.WaitForSeconds(1);
+            }
+
+            scp049.SetGUI("scp049", PseudoGUIPosition.BOTTOM, null);
+        }
+    }
+}
