@@ -17,7 +17,7 @@ namespace Mistaken.BetterSCP.SCP049
         public override string Author => "Mistaken Devs";
 
         /// <inheritdoc/>
-        public override string Name => "BetterSCP.SCP049";
+        public override string Name => "BetterSCP-SCP049";
 
         /// <inheritdoc/>
         public override string Prefix => "MBSCP-049";
