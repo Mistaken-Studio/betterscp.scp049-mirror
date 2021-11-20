@@ -18,7 +18,7 @@ namespace Mistaken.BetterSCP.SCP049
 
         protected override float ShieldRechargeRate => 5f;
 
-        protected override float ShieldEffectivnes => 80f;
+        protected override float ShieldEffectivnes => .8f;
 
         protected override float TimeUntilShieldRecharge => 15f;
 
