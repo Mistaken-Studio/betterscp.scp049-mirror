@@ -87,16 +87,16 @@ namespace Mistaken.BetterSCP.SCP049
                     {
                         try
                         {
-                            if (!ragdollObj.NetworkallowRecall)
+                            if (ragdollObj.NetworkInfo.OwnerHub is null)
                                 continue;
 
-                            if (ragdollObj.CurrentTime < 10f)
+                            if (ragdollObj.NetworkInfo.ExistenceTime < 10f)
                             {
                                 var distance = Vector3.Distance(scp049.Position, ragdollObj.transform.position);
 
-                                if (distance > 10)
+                                if (distance > 10f)
                                      continue;
-                                message.Add($"<color=yellow>{ragdollObj.Networkowner.FullName}</color> - <color=yellow>{Mathf.RoundToInt(distance)}</color>m away - <color=yellow>{Mathf.RoundToInt(10 - ragdollObj.CurrentTime)}</color>s");
+                                message.Add($"<color=yellow>{ragdollObj.NetworkInfo.OwnerHub.name}</color> - <color=yellow>{Mathf.RoundToInt(distance)}</color>m away - <color=yellow>{Mathf.RoundToInt(10f - ragdollObj.NetworkInfo.ExistenceTime)}</color>s");
                             }
                         }
                         catch (System.Exception ex)

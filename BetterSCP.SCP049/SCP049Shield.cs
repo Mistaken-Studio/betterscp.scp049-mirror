@@ -14,7 +14,7 @@ namespace Mistaken.BetterSCP.SCP049
 {
     internal class SCP049Shield : API.Shield.Shield
     {
-        protected override int MaxShield => this.localMaxShield;
+        protected override float MaxShield => this.localMaxShield;
 
         protected override float ShieldRechargeRate => 5f;
 
@@ -45,7 +45,7 @@ namespace Mistaken.BetterSCP.SCP049
 
         private static int SCP049MaxShieldPerZombie { get; set; } = 150;
 
-        private int localMaxShield = 20;
+        private float localMaxShield = 20;
         private API.Components.InRangeBall inRange;
 
         private void UpdateLoop()
