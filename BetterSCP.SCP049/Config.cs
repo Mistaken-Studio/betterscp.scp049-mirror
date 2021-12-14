@@ -22,7 +22,7 @@ namespace Mistaken.BetterSCP.SCP049
         public bool VerbouseOutput { get; set; }
 
         [Description("If true then .contain command will be enabled")]
-        public bool Allow049Recontainment { get; set; } = true;
+        public bool Allow049Recontainment { get; set; } = false;
 
         /// <inheritdoc/>
         [Description("Auto Update Settings")]
