@@ -29,7 +29,7 @@ namespace Mistaken.BetterSCP.SCP049
             base.Start();
 
             this.inRange = API.Components.InRangeBall.Spawn(this.Player.GameObject.transform, Vector3.zero, 10, 5);
-            this.InvokeRepeating("UpdateLoop", 5f, 1f);
+            this.InvokeRepeating(nameof(this.UpdateLoop), 5f, 1f);
         }
 
         protected override void OnDestroy()
