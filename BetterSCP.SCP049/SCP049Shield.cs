@@ -28,7 +28,7 @@ namespace Mistaken.BetterSCP.SCP049
         {
             base.Start();
 
-            this.inRange = API.Components.InRangeBall.Spawn(this.Player.GameObject.transform, Vector3.zero, 10, 5);
+            // this.inRange = API.Components.InRangeBall.Spawn(this.Player.GameObject.transform, Vector3.zero, 10, 5);
             this.InvokeRepeating(nameof(this.UpdateLoop), 5f, 1f);
         }
 
@@ -38,7 +38,7 @@ namespace Mistaken.BetterSCP.SCP049
 
             this.Player.SetGUI("scp049", PseudoGUIPosition.BOTTOM, null);
 
-            Destroy(this.inRange);
+            // Destroy(this.inRange);
         }
 
         private static float SCP0492Regeneration { get; set; } = 1.5f;
@@ -46,8 +46,8 @@ namespace Mistaken.BetterSCP.SCP049
         private static int SCP049MaxShieldPerZombie { get; set; } = 150;
 
         private float localMaxShield = 20;
-        private API.Components.InRangeBall inRange;
 
+        // private API.Components.InRangeBall inRange;
         private void UpdateLoop()
         {
             if (this.Player.Role != RoleType.Scp049)
@@ -56,7 +56,26 @@ namespace Mistaken.BetterSCP.SCP049
             try
             {
                 int maxShield = 20;
-                foreach (var zombie in this.inRange.ColliderInArea)
+                foreach (var zombie in Physics.OverlapSphere(this.Player.Position, 10))
+                {
+                    try
+                    {
+                        var zombiePlayer = Player.Get(zombie.transform.root.gameObject);
+                        if (zombiePlayer == null || zombiePlayer.Role != RoleType.Scp0492)
+                            continue;
+
+                        maxShield += SCP049MaxShieldPerZombie;
+                        if (zombiePlayer.MaxHealth > zombiePlayer.Health)
+                            zombiePlayer.Health += SCP0492Regeneration;
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Log.Error(ex.Message);
+                        Log.Error(ex.StackTrace);
+                    }
+                }
+
+                /*foreach (var zombie in this.inRange.ColliderInArea)
                 {
                     try
                     {
@@ -73,7 +92,7 @@ namespace Mistaken.BetterSCP.SCP049
                         Log.Error(ex.Message);
                         Log.Error(ex.StackTrace);
                     }
-                }
+                }*/
 
                 this.localMaxShield = maxShield;
             }
