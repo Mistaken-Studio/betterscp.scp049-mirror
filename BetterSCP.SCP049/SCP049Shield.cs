@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using Exiled.API.Features;
 using Mistaken.API.Extensions;
 using Mistaken.API.GUI;
@@ -56,11 +57,15 @@ namespace Mistaken.BetterSCP.SCP049
             try
             {
                 int maxShield = 20;
+                HashSet<Player> inRange = new HashSet<Player>();
                 foreach (var zombie in Physics.OverlapSphere(this.Player.Position, 10))
                 {
                     try
                     {
                         var zombiePlayer = Player.Get(zombie.transform.root.gameObject);
+                        if (inRange.Contains(zombiePlayer))
+                            continue;
+                        inRange.Add(zombiePlayer);
                         if (zombiePlayer == null || zombiePlayer.Role != RoleType.Scp0492)
                             continue;
 
