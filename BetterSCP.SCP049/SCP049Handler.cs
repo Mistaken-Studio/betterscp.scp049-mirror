@@ -7,6 +7,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Exiled.API.Features;
+using InventorySystem.Disarming;
 using MEC;
 using Mistaken.API;
 using Mistaken.API.Diagnostics;
@@ -30,6 +31,7 @@ namespace Mistaken.BetterSCP.SCP049
         {
             Exiled.Events.Handlers.Player.ChangingRole += this.Player_ChangingRole;
             Exiled.Events.Handlers.Player.Died += this.Player_Died;
+            Exiled.Events.Handlers.Server.RoundStarted += this.Server_RoundStarted;
 
             BetterSCP.SCPGUIHandler.SCPMessages[RoleType.Scp049] = "<color=red><b><size=500%>UWAGA</size></b></color><br><br><br><br><br><br><size=90%>Rozgrywka jako <color=red>SCP 049</color> na tym serwerze jest zmodyfikowana, <color=red>SCP 049</color> posiada domyślnie dodatkowe <color=yellow>60</color> ahp, każdy <color=red>SCP 049-2</color> w zasięgu <color=yellow>10</color> metrów dodaje +<color=yellow>100</color> do max ahp, ahp regeneruje się z prędkością <color=yellow>20</color> na sekundę pod warunkiem że jest <color=yellow>bezpieczny</color>(w ciągu ostatnich <color=yellow>10</color> sekund nie otrzymał obrażeń)</size>";
         }
@@ -40,6 +42,13 @@ namespace Mistaken.BetterSCP.SCP049
 
             Exiled.Events.Handlers.Player.ChangingRole -= this.Player_ChangingRole;
             Exiled.Events.Handlers.Player.Died -= this.Player_Died;
+            Exiled.Events.Handlers.Server.RoundStarted -= this.Server_RoundStarted;
+        }
+
+        private void Server_RoundStarted()
+        {
+            Commands.DisarmCommand.DisarmedScps.Clear();
+            this.RunCoroutine(this.UpdateDisarmed(), "Handler.UpdateDisarmed");
         }
 
         private void Player_Died(Exiled.Events.EventArgs.DiedEventArgs ev)
@@ -63,7 +72,7 @@ namespace Mistaken.BetterSCP.SCP049
         {
             if (ev.IsAllowed && ev.NewRole == RoleType.Scp049)
             {
-                Timing.RunCoroutine(this.UpdateInfo(ev.Player));
+                Timing.RunCoroutine(this.UpdateInfo(ev.Player), "Handler.UpdateInfo");
                 Timing.CallDelayed(1, () =>
                 {
                     if (ev.IsAllowed && ev.NewRole == RoleType.Scp049 && ev.Player.Role == RoleType.Scp049)
@@ -80,6 +89,8 @@ namespace Mistaken.BetterSCP.SCP049
             yield return Timing.WaitForSeconds(1);
             while (scp049.IsConnected && scp049.Role == RoleType.Scp049)
             {
+                this.Log.Debug("Scp049 disarmed status: " + scp049.Inventory.IsDisarmed(), true);
+
                 try
                 {
                     List<string> message = new List<string>();
@@ -101,7 +112,7 @@ namespace Mistaken.BetterSCP.SCP049
                         }
                         catch (System.Exception ex)
                         {
-                            this.Log.Error("Internal");
+                            this.Log.Error("Internal"); 
                             this.Log.Error(ex.Message);
                             this.Log.Error(ex.StackTrace);
                         }
@@ -123,6 +134,19 @@ namespace Mistaken.BetterSCP.SCP049
             }
 
             scp049.SetGUI("scp049", PseudoGUIPosition.BOTTOM, null);
+        }
+
+        private IEnumerator<float> UpdateDisarmed()
+        {
+            while (Round.IsStarted)
+            {
+                yield return Timing.WaitForSeconds(1);
+                foreach (var values in Commands.DisarmCommand.DisarmedScps)
+                {
+                    if (Vector3.Distance(values.Key.Position, values.Value.Position) >= 30)
+                        Commands.DisarmCommand.DisarmedScps.Remove(values.Key);
+                }
+            }
         }
     }
 }
