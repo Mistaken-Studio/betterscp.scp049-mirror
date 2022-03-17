@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Exiled.API.Extensions;
 using Exiled.API.Features;
+using InventorySystem.Disarming;
 using MEC;
 using Mistaken.API.Diagnostics;
 using Mistaken.API.Extensions;
@@ -73,6 +74,12 @@ namespace Mistaken.BetterSCP.SCP049
             }
         }
 
+        private void Server_RoundStarted()
+        {
+            Commands.DisarmCommand.DisarmedScps.Clear();
+            this.RunCoroutine(this.UpdateDisarmed(), "Handler.UpdateDisarmed");
+        }
+
         private void Player_Died(Exiled.Events.EventArgs.DiedEventArgs ev)
         {
             if (ev.Killer?.Role == RoleType.Scp0492)
@@ -100,7 +107,7 @@ namespace Mistaken.BetterSCP.SCP049
 
             if (ev.NewRole == RoleType.Scp049)
             {
-                Timing.RunCoroutine(this.UpdateInfo(ev.Player));
+                Timing.RunCoroutine(this.UpdateInfo(ev.Player), "Handler.UpdateInfo");
                 Timing.CallDelayed(1, () =>
                 {
                     if (ev.IsAllowed && ev.NewRole == RoleType.Scp049 && ev.Player.Role == RoleType.Scp049)
@@ -117,6 +124,8 @@ namespace Mistaken.BetterSCP.SCP049
             yield return Timing.WaitForSeconds(1);
             while (scp049.IsConnected && scp049.Role == RoleType.Scp049)
             {
+                this.Log.Debug("Scp049 disarmed status: " + scp049.Inventory.IsDisarmed(), true);
+
                 try
                 {
                     List<string> message = new List<string>();
@@ -139,7 +148,7 @@ namespace Mistaken.BetterSCP.SCP049
                         }
                         catch (System.Exception ex)
                         {
-                            this.Log.Error("Internal");
+                            this.Log.Error("Internal"); 
                             this.Log.Error(ex.Message);
                             this.Log.Error(ex.StackTrace);
                         }
@@ -161,6 +170,19 @@ namespace Mistaken.BetterSCP.SCP049
             }
 
             scp049.SetGUI("scp049", PseudoGUIPosition.BOTTOM, null);
+        }
+
+        private IEnumerator<float> UpdateDisarmed()
+        {
+            while (Round.IsStarted)
+            {
+                yield return Timing.WaitForSeconds(1);
+                foreach (var values in Commands.DisarmCommand.DisarmedScps)
+                {
+                    if (Vector3.Distance(values.Key.Position, values.Value.Position) >= 30)
+                        Commands.DisarmCommand.DisarmedScps.Remove(values.Key);
+                }
+            }
         }
     }
 }

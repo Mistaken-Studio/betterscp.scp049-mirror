@@ -24,6 +24,9 @@ namespace Mistaken.BetterSCP.SCP049
         [Description("If true then .contain command will be enabled")]
         public bool Allow049Recontainment { get; set; } = false;
 
+        [Description("If true then 049 will be disarmable")]
+        public bool Allow049Disarming { get; set; } = false;
+
         /// <inheritdoc/>
         [Description("Auto Update Settings")]
         public System.Collections.Generic.Dictionary<string, string> AutoUpdateConfig { get; set; }

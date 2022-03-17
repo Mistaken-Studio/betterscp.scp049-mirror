@@ -24,6 +24,7 @@
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>x64</PlatformTarget>
     <DocumentationFile>bin\Debug\Mistaken.BetterSCP.SCP049.xml</DocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -42,6 +43,7 @@
     <Reference Include="Mistaken.BetterSCP" HintPath="$(MISTAKEN_REFERENCES)\Mistaken.BetterSCP.dll" />
     <Reference Include="UnityEngine.CoreModule" HintPath="$(MISTAKEN_REFERENCES)\UnityEngine.CoreModule.dll" />
     <Reference Include="UnityEngine.PhysicsModule" HintPath="$(MISTAKEN_REFERENCES)\UnityEngine.PhysicsModule.dll" />
+    <Reference Include="0Harmony" HintPath="$(MISTAKEN_REFERENCES)\0Harmony.dll" />
     <Reference Include="Mirror" HintPath="$(MISTAKEN_REFERENCES)\Mirror.dll" />
     <Reference Include="CommandSystem.Core" HintPath="$(MISTAKEN_REFERENCES)\CommandSystem.Core.dll" />
     <Reference Include="Assembly-CSharp-firstpass" HintPath="$(MISTAKEN_REFERENCES)\Assembly-CSharp-firstpass.dll" />
@@ -56,6 +58,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ContainCommand.cs" />
+    <Compile Include="DisarmCommand.cs" />
     <Compile Include="PluginHandler.cs" />
     <Compile Include="Config.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
