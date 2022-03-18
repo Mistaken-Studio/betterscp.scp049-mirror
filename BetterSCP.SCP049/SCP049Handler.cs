@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="SCP049Handler.cs" company="Mistaken">
 // Copyright (c) Mistaken. All rights reserved.
 // </copyright>
@@ -112,7 +112,7 @@ namespace Mistaken.BetterSCP.SCP049
                         }
                         catch (System.Exception ex)
                         {
-                            this.Log.Error("Internal"); 
+                            this.Log.Error("Internal");
                             this.Log.Error(ex.Message);
                             this.Log.Error(ex.StackTrace);
                         }
