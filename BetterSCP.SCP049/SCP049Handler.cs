@@ -31,7 +31,9 @@ namespace Mistaken.BetterSCP.SCP049
         {
             Exiled.Events.Handlers.Player.ChangingRole += this.Player_ChangingRole;
             Exiled.Events.Handlers.Player.Died += this.Player_Died;
-            Exiled.Events.Handlers.Server.RoundStarted += this.Server_RoundStarted;
+            Exiled.Events.Handlers.Player.Dying += this.Player_Dying;
+            Exiled.Events.Handlers.Scp049.StartingRecall += this.Scp049_StartingRecall;
+            Exiled.Events.Handlers.Server.RestartingRound += this.Server_RestartingRound;
 
             BetterSCP.SCPGUIHandler.SCPMessages[RoleType.Scp049] = "<color=red><b><size=500%>UWAGA</size></b></color><br><br><br><br><br><br><size=90%>Rozgrywka jako <color=red>SCP 049</color> na tym serwerze jest zmodyfikowana, <color=red>SCP 049</color> posiada domyślnie dodatkowe <color=yellow>60</color> ahp, każdy <color=red>SCP 049-2</color> w zasięgu <color=yellow>10</color> metrów dodaje +<color=yellow>100</color> do max ahp, ahp regeneruje się z prędkością <color=yellow>20</color> na sekundę pod warunkiem że jest <color=yellow>bezpieczny</color>(w ciągu ostatnich <color=yellow>10</color> sekund nie otrzymał obrażeń)</size>";
         }
@@ -42,13 +44,34 @@ namespace Mistaken.BetterSCP.SCP049
 
             Exiled.Events.Handlers.Player.ChangingRole -= this.Player_ChangingRole;
             Exiled.Events.Handlers.Player.Died -= this.Player_Died;
-            Exiled.Events.Handlers.Server.RoundStarted -= this.Server_RoundStarted;
+            Exiled.Events.Handlers.Player.Dying -= this.Player_Dying;
+            Exiled.Events.Handlers.Scp049.StartingRecall -= this.Scp049_StartingRecall;
+            Exiled.Events.Handlers.Server.RestartingRound -= this.Server_RestartingRound;
         }
 
-        private void Server_RoundStarted()
+        private readonly HashSet<Player> notRecallable = new HashSet<Player>();
+
+        private void Server_RestartingRound()
         {
-            Commands.DisarmCommand.DisarmedScps.Clear();
-            this.RunCoroutine(this.UpdateDisarmed(), "Handler.UpdateDisarmed");
+            this.notRecallable.Clear();
+        }
+
+        private void Scp049_StartingRecall(Exiled.Events.EventArgs.StartingRecallEventArgs ev)
+        {
+            if (this.notRecallable.Contains(ev.Target))
+                ev.IsAllowed = false;
+        }
+
+        private void Player_Dying(Exiled.Events.EventArgs.DyingEventArgs ev)
+        {
+            if (!ev.IsAllowed)
+                return;
+
+            if (ev.Target.IsScp)
+            {
+                this.notRecallable.Add(ev.Target);
+                Timing.CallDelayed(30, () => this.notRecallable.Remove(ev.Target));
+            }
         }
 
         private void Player_Died(Exiled.Events.EventArgs.DiedEventArgs ev)
@@ -70,7 +93,13 @@ namespace Mistaken.BetterSCP.SCP049
 
         private void Player_ChangingRole(Exiled.Events.EventArgs.ChangingRoleEventArgs ev)
         {
-            if (ev.IsAllowed && ev.NewRole == RoleType.Scp049)
+            if (!ev.IsAllowed)
+                return;
+
+            if (ev.NewRole != RoleType.Spectator)
+                this.notRecallable.Remove(ev.Player);
+
+            if (ev.NewRole == RoleType.Scp049)
             {
                 Timing.RunCoroutine(this.UpdateInfo(ev.Player), "Handler.UpdateInfo");
                 Timing.CallDelayed(1, () =>
