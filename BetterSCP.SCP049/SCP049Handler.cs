@@ -6,9 +6,9 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using Exiled.API.Extensions;
 using Exiled.API.Features;
 using MEC;
-using Mistaken.API;
 using Mistaken.API.Diagnostics;
 using Mistaken.API.Extensions;
 using Mistaken.API.GUI;
@@ -120,16 +120,17 @@ namespace Mistaken.BetterSCP.SCP049
                 try
                 {
                     List<string> message = new List<string>();
-                    foreach (var ragdollObj in GameObject.FindObjectsOfType<Ragdoll>())
+                    foreach (var ragdollObj in Map.Ragdolls.ToArray())
                     {
                         try
                         {
                             if (ragdollObj.NetworkInfo.OwnerHub is null)
                                 continue;
-
+                            if (ragdollObj.NetworkInfo.RoleType.GetTeam() == Team.SCP)
+                                continue;
                             if (ragdollObj.NetworkInfo.ExistenceTime < 10f)
                             {
-                                var distance = Vector3.Distance(scp049.Position, ragdollObj.transform.position);
+                                var distance = Vector3.Distance(scp049.Position, ragdollObj.Base.transform.position);
 
                                 if (distance > 10f)
                                      continue;
