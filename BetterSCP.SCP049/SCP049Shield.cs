@@ -71,7 +71,7 @@ namespace Mistaken.BetterSCP.SCP049
 
                         maxShield += SCP049MaxShieldPerZombie;
                         if (zombiePlayer.MaxHealth > zombiePlayer.Health)
-                            zombiePlayer.Health += SCP0492Regeneration;
+                            zombiePlayer.Health = Math.Min(zombiePlayer.MaxHealth, zombiePlayer.Health + SCP0492Regeneration);
                     }
                     catch (System.Exception ex)
                     {
