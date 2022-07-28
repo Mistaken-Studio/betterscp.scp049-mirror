@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="SCP049Shield.cs" company="Mistaken">
 // Copyright (c) Mistaken. All rights reserved.
 // </copyright>
@@ -70,7 +70,7 @@ namespace Mistaken.BetterSCP.SCP049
                             continue;
 
                         maxShield += SCP049MaxShieldPerZombie;
-                        if (zombiePlayer.MaxHealth >= zombiePlayer.Health)
+                        if (zombiePlayer.MaxHealth > zombiePlayer.Health)
                             zombiePlayer.Health += SCP0492Regeneration;
                     }
                     catch (System.Exception ex)
