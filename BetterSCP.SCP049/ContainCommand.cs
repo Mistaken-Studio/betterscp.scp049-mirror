@@ -39,7 +39,7 @@ namespace Mistaken.BetterSCP.SCP049.Commands
             if (!PluginHandler.Instance.Config.Allow049Recontainment)
                 return new string[] { "This command is disabled on this server" };
             var player = sender.GetPlayer();
-            if (player.Side != Exiled.API.Enums.Side.Mtf && player.Team != Team.CHI)
+            if (player.Role.Side != Exiled.API.Enums.Side.Mtf && player.Role.Team != Team.CHI)
                 return new string[] { "Only Foundation Personnel(MTF, Guards, Sciencists) can use this command" };
             if (!(player.Position.y > -800 && player.Position.y < -700))
                 return new string[] { "You have to be in SCP-049 containment chamber" };
@@ -78,10 +78,10 @@ namespace Mistaken.BetterSCP.SCP049.Commands
             }
 
             alreadyRunning = false;
-            scp049.SetRole(recontainer.Team == Team.CHI ? RoleType.ChaosConscript : RoleType.NtfSpecialist, reason: Exiled.API.Enums.SpawnReason.Escaped, lite: true);
+            scp049.SetRole(recontainer.Role.Team == Team.CHI ? RoleType.ChaosConscript : RoleType.NtfSpecialist, reason: Exiled.API.Enums.SpawnReason.Escaped, lite: true);
             scp049.SetGUI("contain049", PseudoGUIPosition.MIDDLE, $"<color=red><size=150%>Recontainment successfull</size></color>", 5);
             string recontainerName;
-            if (recontainer.Team == Team.CHI)
+            if (recontainer.Role.Team == Team.CHI)
                 recontainerName = "CHAOS INSURGENCY";
             else if (recontainer.Role == RoleType.Scientist)
                 recontainerName = "SCIENCE PERSONNEL";
