@@ -44,9 +44,9 @@ namespace Mistaken.BetterSCP.SCP049
 
         private static float SCP0492Regeneration { get; set; } = 1.5f;
 
-        private static int SCP049MaxShieldPerZombie { get; set; } = 150;
+        private static int SCP049MaxShieldPerZombie { get; set; } = 100;
 
-        private float localMaxShield = 20;
+        private float localMaxShield = 200;
 
         // private API.Components.InRangeBall inRange;
         private void UpdateLoop()
@@ -56,7 +56,7 @@ namespace Mistaken.BetterSCP.SCP049
 
             try
             {
-                int maxShield = 20;
+                int maxShield = 200;
                 HashSet<Player> inRange = new HashSet<Player>();
                 foreach (var zombie in Physics.OverlapSphere(this.Player.Position, 10))
                 {
@@ -70,7 +70,7 @@ namespace Mistaken.BetterSCP.SCP049
                             continue;
 
                         maxShield += SCP049MaxShieldPerZombie;
-                        if (zombiePlayer.MaxHealth > zombiePlayer.Health)
+                        if (zombiePlayer.MaxHealth >= zombiePlayer.Health)
                             zombiePlayer.Health += SCP0492Regeneration;
                     }
                     catch (System.Exception ex)
