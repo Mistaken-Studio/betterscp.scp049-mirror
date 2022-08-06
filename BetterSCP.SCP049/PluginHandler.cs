@@ -11,7 +11,7 @@ using Exiled.API.Features;
 namespace Mistaken.BetterSCP.SCP049
 {
     /// <inheritdoc/>
-    internal class PluginHandler : Plugin<Config>
+    internal class PluginHandler : Plugin<Config, Translation>
     {
         /// <inheritdoc/>
         public override string Author => "Mistaken Devs";

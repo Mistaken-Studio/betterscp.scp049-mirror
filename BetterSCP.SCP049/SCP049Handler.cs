@@ -34,7 +34,7 @@ namespace Mistaken.BetterSCP.SCP049
             Exiled.Events.Handlers.Scp049.StartingRecall += this.Scp049_StartingRecall;
             Exiled.Events.Handlers.Server.RestartingRound += this.Server_RestartingRound;
 
-            BetterSCP.SCPGUIHandler.SCPMessages[RoleType.Scp049] = "<color=red><b><size=500%>UWAGA</size></b></color><br><br><br><br><br><br><size=90%>Rozgrywka jako <color=red>SCP 049</color> na tym serwerze jest zmodyfikowana, <color=red>SCP 049</color> posiada domyślnie dodatkowe <color=yellow>60</color> ahp, każdy <color=red>SCP 049-2</color> w zasięgu <color=yellow>10</color> metrów dodaje +<color=yellow>100</color> do max ahp, ahp regeneruje się z prędkością <color=yellow>20</color> na sekundę pod warunkiem że jest <color=yellow>bezpieczny</color>(w ciągu ostatnich <color=yellow>10</color> sekund nie otrzymał obrażeń)</size>";
+            BetterSCP.SCPGUIHandler.SCPMessages[RoleType.Scp049] = PluginHandler.Instance.Translation.StartMessage;
         }
 
         public override void OnDisable()
