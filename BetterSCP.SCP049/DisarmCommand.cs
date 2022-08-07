@@ -24,9 +24,9 @@ namespace Mistaken.BetterSCP.SCP049.Commands
     public class DisarmCommand : IBetterCommand
     {
         /// <summary>
-        /// Hashset of disarmed SCP 049s.
+        /// Gets dictionary of disarmed SCP-049s.
         /// </summary>
-        public static readonly Dictionary<Player, Player> DisarmedScps = new Dictionary<Player, Player>();
+        public static Dictionary<Player, Player> DisarmedScps { get; internal set; } = new Dictionary<Player, Player>();
 
         /// <summary>
         /// Gets or sets a SCP 049 cuffing action.
@@ -49,11 +49,11 @@ namespace Mistaken.BetterSCP.SCP049.Commands
             if (!PluginHandler.Instance.Config.Allow049Disarming)
                 return new string[] { "This command is disabled on this server" };
             var player = sender.GetPlayer();
-            if (player.Side != Exiled.API.Enums.Side.Mtf && player.Team != Team.CHI)
-                return new string[] { "Only Foundation Personnel(MTF, Guards, Sciencists) can use this command" };
+            if (player.Role.Side != Exiled.API.Enums.Side.Mtf && player.Role.Team != Team.CHI)
+                return new string[] { "Only Foundation Personnel (MTF, Guards, Sciencists) or Chaos Insurgents can use this command" };
             if (this.GetCuffingLimit(player) <= this.GetCuffedPlayers(player).Count() + (DisarmedScps.ContainsKey(player) ? 1 : 0))
                 return new string[] { "You have reached your cuffing limit" };
-            var scps = RealPlayers.List.Where(p => p.Role == RoleType.Scp049 && Vector3.Distance(p.Position, player.Position) <= 4).ToList();
+            var scps = RealPlayers.List.Where(p => p.Role.Type == RoleType.Scp049 && Vector3.Distance(p.Position, player.Position) <= 4).ToList();
             if (scps.Count == 0)
                 return new string[] { "There is no SCP-049 nearby" };
             if (DisarmedScps.TryGetValue(player, out Player scp))

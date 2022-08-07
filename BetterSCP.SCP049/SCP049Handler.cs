@@ -34,6 +34,7 @@ namespace Mistaken.BetterSCP.SCP049
             Exiled.Events.Handlers.Player.Dying += this.Player_Dying;
             Exiled.Events.Handlers.Scp049.StartingRecall += this.Scp049_StartingRecall;
             Exiled.Events.Handlers.Server.RestartingRound += this.Server_RestartingRound;
+            Exiled.Events.Handlers.Player.Hurting += this.Player_Hurting;
 
             BetterSCP.SCPGUIHandler.SCPMessages[RoleType.Scp049] = PluginHandler.Instance.Translation.StartMessage;
         }
@@ -47,17 +48,21 @@ namespace Mistaken.BetterSCP.SCP049
             Exiled.Events.Handlers.Player.Dying -= this.Player_Dying;
             Exiled.Events.Handlers.Scp049.StartingRecall -= this.Scp049_StartingRecall;
             Exiled.Events.Handlers.Server.RestartingRound -= this.Server_RestartingRound;
+            Exiled.Events.Handlers.Player.Hurting -= this.Player_Hurting;
         }
 
         private readonly HashSet<Player> notRecallable = new HashSet<Player>();
 
         private void Server_RestartingRound()
         {
+            Commands.DisarmCommand.DisarmedScps.Clear();
             this.notRecallable.Clear();
         }
 
         private void Scp049_StartingRecall(Exiled.Events.EventArgs.StartingRecallEventArgs ev)
         {
+            if (Commands.DisarmCommand.DisarmedScps.ContainsValue(ev.Scp049))
+                ev.IsAllowed = false;
             if (this.notRecallable.Contains(ev.Target))
                 ev.IsAllowed = false;
         }
@@ -76,13 +81,12 @@ namespace Mistaken.BetterSCP.SCP049
 
         private void Server_RoundStarted()
         {
-            Commands.DisarmCommand.DisarmedScps.Clear();
             this.RunCoroutine(this.UpdateDisarmed(), "Handler.UpdateDisarmed");
         }
 
         private void Player_Died(Exiled.Events.EventArgs.DiedEventArgs ev)
         {
-            if (ev.Killer?.Role == RoleType.Scp0492)
+            if (ev.Killer?.Role.Type == RoleType.Scp0492)
             {
                 ev.Killer.Health += 100;
                 ev.Killer.MaxArtificialHealth += 100;
@@ -110,7 +114,7 @@ namespace Mistaken.BetterSCP.SCP049
                 Timing.RunCoroutine(this.UpdateInfo(ev.Player), "Handler.UpdateInfo");
                 Timing.CallDelayed(1, () =>
                 {
-                    if (ev.IsAllowed && ev.NewRole == RoleType.Scp049 && ev.Player.Role == RoleType.Scp049)
+                    if (ev.IsAllowed && ev.NewRole == RoleType.Scp049 && ev.Player.Role.Type == RoleType.Scp049)
                     {
                         SCP049Shield.Ini<SCP049Shield>(ev.Player);
                         ev.Player.ArtificialHealth = 20f;
@@ -119,12 +123,22 @@ namespace Mistaken.BetterSCP.SCP049
             }
         }
 
+        private void Player_Hurting(Exiled.Events.EventArgs.HurtingEventArgs ev)
+        {
+            if (Commands.DisarmCommand.DisarmedScps.ContainsValue(ev.Attacker))
+                ev.IsAllowed = false;
+        }
+
         private IEnumerator<float> UpdateInfo(Player scp049)
         {
             yield return Timing.WaitForSeconds(1);
-            while (scp049.IsConnected && scp049.Role == RoleType.Scp049)
+            while (scp049.IsConnected && scp049.Role.Type == RoleType.Scp049)
             {
-                this.Log.Debug("Scp049 disarmed status: " + scp049.Inventory.IsDisarmed(), true);
+                if (Commands.DisarmCommand.DisarmedScps.ContainsValue(scp049))
+                {
+                    yield return Timing.WaitForSeconds(1f);
+                    continue;
+                }
 
                 try
                 {
@@ -139,6 +153,8 @@ namespace Mistaken.BetterSCP.SCP049
                                 continue;
                             if (ragdollObj.NetworkInfo.ExistenceTime < 10f)
                             {
+                                if (ragdollObj.Base == null)
+                                    continue;
                                 var distance = Vector3.Distance(scp049.Position, ragdollObj.Base.transform.position);
 
                                 if (distance > 10f)
@@ -148,7 +164,7 @@ namespace Mistaken.BetterSCP.SCP049
                         }
                         catch (System.Exception ex)
                         {
-                            this.Log.Error("Internal"); 
+                            this.Log.Error("Internal");
                             this.Log.Error(ex.Message);
                             this.Log.Error(ex.StackTrace);
                         }
@@ -176,12 +192,13 @@ namespace Mistaken.BetterSCP.SCP049
         {
             while (Round.IsStarted)
             {
-                yield return Timing.WaitForSeconds(1);
                 foreach (var values in Commands.DisarmCommand.DisarmedScps)
                 {
                     if (Vector3.Distance(values.Key.Position, values.Value.Position) >= 30)
                         Commands.DisarmCommand.DisarmedScps.Remove(values.Key);
                 }
+
+                yield return Timing.WaitForSeconds(1);
             }
         }
     }

@@ -40,10 +40,10 @@ namespace Mistaken.BetterSCP.SCP049.Commands
                 return new string[] { "This command is disabled on this server" };
             var player = sender.GetPlayer();
             if (player.Role.Side != Exiled.API.Enums.Side.Mtf && player.Role.Team != Team.CHI)
-                return new string[] { "Only Foundation Personnel(MTF, Guards, Sciencists) can use this command" };
+                return new string[] { "Only Foundation Personnel (MTF, Guards, Sciencists) or Chaos Insurgents can use this command" };
             if (!(player.Position.y > -800 && player.Position.y < -700))
                 return new string[] { "You have to be in SCP-049 containment chamber" };
-            var scps = RealPlayers.List.Where(p => p.Role == RoleType.Scp049 && (player.Position.y > -800 && player.Position.y < -700));
+            var scps = RealPlayers.List.Where(p => p.Role.Type == RoleType.Scp049 && (player.Position.y > -800 && player.Position.y < -700));
             if (scps.Count() == 0)
                 return new string[] { "There is no SCP-049 in SCP-049 containment chamber" };
             if (alreadyRunning)
@@ -83,7 +83,7 @@ namespace Mistaken.BetterSCP.SCP049.Commands
             string recontainerName;
             if (recontainer.Role.Team == Team.CHI)
                 recontainerName = "CHAOS INSURGENCY";
-            else if (recontainer.Role == RoleType.Scientist)
+            else if (recontainer.Role.Type == RoleType.Scientist)
                 recontainerName = "SCIENCE PERSONNEL";
             else
             {
