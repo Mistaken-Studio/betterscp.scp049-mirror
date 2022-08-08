@@ -90,8 +90,6 @@ namespace Mistaken.BetterSCP.SCP049
 
         private void Server_RoundStarted()
         {
-            this.RunCoroutine(this.UpdateDisarmed(), "Handler.UpdateDisarmed");
-
             // Scp049 Recontainment
             InRange inRange = null;
             List<Player> alreadyRunning = new List<Player>();
@@ -281,20 +279,6 @@ namespace Mistaken.BetterSCP.SCP049
             }
 
             scp049.SetGUI("scp049", PseudoGUIPosition.BOTTOM, null);
-        }
-
-        private IEnumerator<float> UpdateDisarmed()
-        {
-            while (Round.IsStarted)
-            {
-                foreach (var kvp in Commands.DisarmCommand.DisarmedScps.ToArray())
-                {
-                    if (Vector3.Distance(kvp.Key.Position, kvp.Value.Position) >= 30)
-                        Commands.DisarmCommand.DisarmedScps.Remove(kvp.Key);
-                }
-
-                yield return Timing.WaitForSeconds(1);
-            }
         }
     }
 }

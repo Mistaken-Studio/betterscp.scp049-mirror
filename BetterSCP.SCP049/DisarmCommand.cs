@@ -108,6 +108,14 @@ namespace Mistaken.BetterSCP.SCP049.Commands
             while (DisarmedScps.ContainsValue(player))
             {
                 player.SetGUI("disarmed049gui", PseudoGUIPosition.MIDDLE, $"<br><br><size=200%><color=red>You are disarmed!</color></size><br>Your cuffer is: <color=yellow>{cuffer.Nickname}</color><br>Follow orders!");
+                if (player.IsConnected && cuffer.IsConnected)
+                {
+                    if (Vector3.Distance(player.Position, cuffer.Position) >= 30)
+                        DisarmedScps.Remove(cuffer);
+                }
+                else
+                    DisarmedScps.Remove(cuffer);
+
                 yield return Timing.WaitForSeconds(1);
             }
 
