@@ -24,14 +24,14 @@ namespace Mistaken.BetterSCP.SCP049.Commands
     public class DisarmCommand : IBetterCommand
     {
         /// <summary>
+        /// Event that's fired when SCP-049 is getting cuffed;
+        /// </summary>
+        public static event EventHandler<(Player Cuffer, Player Scp049)> Cuffed049;
+
+        /// <summary>
         /// Gets dictionary of disarmed SCP-049s.
         /// </summary>
         public static Dictionary<Player, Player> DisarmedScps { get; internal set; } = new Dictionary<Player, Player>();
-
-        /// <summary>
-        /// Gets or sets a SCP 049 cuffing action.
-        /// </summary>
-        public static Action<(Player, Player)> Cuffing049 { get; set; }
 
         /// <inheritdoc/>
         public override string Command => "disarm049";
@@ -46,7 +46,7 @@ namespace Mistaken.BetterSCP.SCP049.Commands
         public override string[] Execute(ICommandSender sender, string[] args, out bool success)
         {
             success = false;
-            if (!PluginHandler.Instance.Config.Allow049Disarming)
+            if (!PluginHandler.Instance.Config.Allow049Recontainment)
                 return new string[] { "This command is disabled on this server" };
             var player = sender.GetPlayer();
             if (player.Role.Side != Exiled.API.Enums.Side.Mtf && player.Role.Team != Team.CHI)
@@ -79,7 +79,7 @@ namespace Mistaken.BetterSCP.SCP049.Commands
             scp049.SetGUI("disarm049", PseudoGUIPosition.MIDDLE, "<color=red><size=150%>You are being disarmed</size></color><br>Stand still for <color=yellow>3</color>s", 5);
             yield return Timing.WaitForSeconds(1);
             Vector3 pos = scp049.Position;
-            for (int i = 4; i >= 0; i--)
+            for (int i = 3; i >= 0; i--)
             {
                 if (!scp049.IsConnected)
                     break;
@@ -92,13 +92,26 @@ namespace Mistaken.BetterSCP.SCP049.Commands
                 }
 
                 scp049.SetGUI("disarm049", PseudoGUIPosition.MIDDLE, $"<color=red><size=150%>You are being disarmed</size></color><br>Stand still for <color=yellow>{i}</color>s");
-                yield return Timing.WaitForSeconds(0.5f);
+                yield return Timing.WaitForSeconds(1f);
             }
 
             DisarmedScps.Add(disarmer, scp049);
-            Cuffing049.Invoke((disarmer, scp049));
+            if (Cuffed049 != null)
+                Cuffed049.Invoke(null, (disarmer, scp049));
             alreadyRunning = false;
-            scp049.SetGUI("disarm049", PseudoGUIPosition.MIDDLE, $"<color=red><size=150%>Disarming successfull</size></color>", 5);
+            scp049.SetGUI("disarm049", PseudoGUIPosition.MIDDLE, null);
+            Timing.RunCoroutine(this.UpdateGUI(scp049, disarmer));
+        }
+
+        private IEnumerator<float> UpdateGUI(Player player, Player cuffer)
+        {
+            while (DisarmedScps.ContainsValue(player))
+            {
+                player.SetGUI("disarmed049gui", PseudoGUIPosition.MIDDLE, $"<br><br><size=200%><color=red>You are disarmed!</color></size><br>Your cuffer is: <color=yellow>{cuffer.Nickname}</color><br>Follow orders!");
+                yield return Timing.WaitForSeconds(1);
+            }
+
+            player.SetGUI("disarmed049gui", PseudoGUIPosition.MIDDLE, null);
         }
 
         private IEnumerable<Player> GetCuffedPlayers(Player cuffer)

@@ -4,12 +4,15 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using Exiled.API.Enums;
 using Exiled.API.Extensions;
 using Exiled.API.Features;
 using InventorySystem.Disarming;
 using MEC;
+using Mistaken.API.Components;
 using Mistaken.API.Diagnostics;
 using Mistaken.API.Extensions;
 using Mistaken.API.GUI;
@@ -32,9 +35,12 @@ namespace Mistaken.BetterSCP.SCP049
             Exiled.Events.Handlers.Player.ChangingRole += this.Player_ChangingRole;
             Exiled.Events.Handlers.Player.Died += this.Player_Died;
             Exiled.Events.Handlers.Player.Dying += this.Player_Dying;
+            Exiled.Events.Handlers.Player.Hurting += this.Player_Hurting;
+            Exiled.Events.Handlers.Player.InteractingDoor += this.Player_InteractingDoor;
+            Exiled.Events.Handlers.Player.InteractingElevator += this.Player_InteractingElevator;
             Exiled.Events.Handlers.Scp049.StartingRecall += this.Scp049_StartingRecall;
             Exiled.Events.Handlers.Server.RestartingRound += this.Server_RestartingRound;
-            Exiled.Events.Handlers.Player.Hurting += this.Player_Hurting;
+            Exiled.Events.Handlers.Server.RoundStarted += this.Server_RoundStarted;
 
             BetterSCP.SCPGUIHandler.SCPMessages[RoleType.Scp049] = PluginHandler.Instance.Translation.StartMessage;
         }
@@ -46,9 +52,12 @@ namespace Mistaken.BetterSCP.SCP049
             Exiled.Events.Handlers.Player.ChangingRole -= this.Player_ChangingRole;
             Exiled.Events.Handlers.Player.Died -= this.Player_Died;
             Exiled.Events.Handlers.Player.Dying -= this.Player_Dying;
+            Exiled.Events.Handlers.Player.Hurting -= this.Player_Hurting;
+            Exiled.Events.Handlers.Player.InteractingDoor -= this.Player_InteractingDoor;
+            Exiled.Events.Handlers.Player.InteractingElevator -= this.Player_InteractingElevator;
             Exiled.Events.Handlers.Scp049.StartingRecall -= this.Scp049_StartingRecall;
             Exiled.Events.Handlers.Server.RestartingRound -= this.Server_RestartingRound;
-            Exiled.Events.Handlers.Player.Hurting -= this.Player_Hurting;
+            Exiled.Events.Handlers.Server.RoundStarted -= this.Server_RoundStarted;
         }
 
         private readonly HashSet<Player> notRecallable = new HashSet<Player>();
@@ -82,6 +91,74 @@ namespace Mistaken.BetterSCP.SCP049
         private void Server_RoundStarted()
         {
             this.RunCoroutine(this.UpdateDisarmed(), "Handler.UpdateDisarmed");
+
+            // Scp049 Recontainment
+            InRange inRange = null;
+            List<Player> alreadyRunning = new List<Player>();
+            IEnumerator<float> Handler(Player player)
+            {
+                if (alreadyRunning.Contains(player))
+                    yield break;
+                if (player.Role.Type != RoleType.Scp049 || !Commands.DisarmCommand.DisarmedScps.ContainsValue(player))
+                    yield break;
+                alreadyRunning.Add(player);
+                var cuffer = Commands.DisarmCommand.DisarmedScps.First(x => x.Value == player).Key;
+                for (int i = 4; i > 0; i--)
+                {
+                    if (!player.IsConnected)
+                        yield break;
+
+                    if (!inRange.ColliderInArea.Select(x => Player.Get(x)).Contains(player))
+                    {
+                        alreadyRunning.Remove(player);
+                        player.SetGUI("recontain049", PseudoGUIPosition.MIDDLE, PluginHandler.Instance.Translation.ContainingFailedMessage049, 5);
+                        cuffer.SetGUI("recontain049", PseudoGUIPosition.MIDDLE, PluginHandler.Instance.Translation.ContainingFailedMessageCuffer, 5);
+                        yield break;
+                    }
+
+                    player.SetGUI("recontain049", PseudoGUIPosition.MIDDLE, string.Format(PluginHandler.Instance.Translation.ContainingMessage049, i));
+                    cuffer.SetGUI("recontain049", PseudoGUIPosition.MIDDLE, string.Format(PluginHandler.Instance.Translation.ContainingMessageCuffer, i));
+                    yield return Timing.WaitForSeconds(1);
+                }
+
+                if (Commands.DisarmCommand.DisarmedScps.ContainsValue(player))
+                    Commands.DisarmCommand.DisarmedScps.Remove(cuffer);
+
+                alreadyRunning.Remove(player);
+                player.SetGUI("recontain049", PseudoGUIPosition.MIDDLE, null);
+                cuffer.SetGUI("recontain049", PseudoGUIPosition.MIDDLE, null);
+
+                player.SetRole(cuffer.Role.Team == Team.CHI ? RoleType.ChaosConscript : RoleType.NtfSpecialist, reason: SpawnReason.Escaped, lite: true);
+                string recontainerName;
+                if (cuffer.Role.Team == Team.CHI)
+                    recontainerName = "CHAOS INSURGENCY";
+                else if (cuffer.Role.Type == RoleType.Scientist)
+                    recontainerName = "SCIENCE PERSONNEL";
+                else
+                {
+                    string unit = cuffer.ReferenceHub.characterClassManager.CurUnitName;
+                    if (unit.StartsWith("<color="))
+                        unit = unit.Split('>')[1].Split('<')[0].Trim();
+                    try
+                    {
+                        string[] array = unit.Split('-');
+                        recontainerName = "UNIT NATO_" + array[0][0].ToString() + " " + array[1];
+                    }
+                    catch
+                    {
+                        global::ServerConsole.AddLog("Error, couldn't convert '" + unit + "' into a CASSIE-readable form.", ConsoleColor.Gray);
+                        recontainerName = "UNKNOWN";
+                    }
+                }
+
+                Cassie.Message($"SCP 0 4 9 recontained successfully by {recontainerName}");
+            }
+
+            if (PluginHandler.Instance.Config.Allow049Recontainment)
+            {
+                var scp049Chamber = Room.List.First(x => x.Type == RoomType.Hcz049).Transform;
+                inRange = InRange.Spawn(scp049Chamber, new Vector3(0f, 266.5f, 14f), new Vector3(20f, 5f, 6f), (Player p) => this.RunCoroutine(Handler(p)));
+            }
         }
 
         private void Player_Died(Exiled.Events.EventArgs.DiedEventArgs ev)
@@ -94,6 +171,9 @@ namespace Mistaken.BetterSCP.SCP049
                 if (ev.Killer.MaxHealth < ev.Killer.Health)
                     ev.Killer.Health = ev.Killer.MaxHealth;
             }
+
+            if (Commands.DisarmCommand.DisarmedScps.ContainsKey(ev.Target))
+                Commands.DisarmCommand.DisarmedScps.Remove(ev.Target);
 
             /*else if (ev.Killer?.Role == RoleType.Scp049)
             {
@@ -108,6 +188,9 @@ namespace Mistaken.BetterSCP.SCP049
 
             if (ev.NewRole != RoleType.Spectator)
                 this.notRecallable.Remove(ev.Player);
+
+            if (Commands.DisarmCommand.DisarmedScps.ContainsKey(ev.Player))
+                Commands.DisarmCommand.DisarmedScps.Remove(ev.Player);
 
             if (ev.NewRole == RoleType.Scp049)
             {
@@ -126,6 +209,18 @@ namespace Mistaken.BetterSCP.SCP049
         private void Player_Hurting(Exiled.Events.EventArgs.HurtingEventArgs ev)
         {
             if (Commands.DisarmCommand.DisarmedScps.ContainsValue(ev.Attacker))
+                ev.IsAllowed = false;
+        }
+
+        private void Player_InteractingElevator(Exiled.Events.EventArgs.InteractingElevatorEventArgs ev)
+        {
+            if (Commands.DisarmCommand.DisarmedScps.ContainsValue(ev.Player))
+                ev.IsAllowed = false;
+        }
+
+        private void Player_InteractingDoor(Exiled.Events.EventArgs.InteractingDoorEventArgs ev)
+        {
+            if (Commands.DisarmCommand.DisarmedScps.ContainsValue(ev.Player))
                 ev.IsAllowed = false;
         }
 
@@ -192,10 +287,10 @@ namespace Mistaken.BetterSCP.SCP049
         {
             while (Round.IsStarted)
             {
-                foreach (var values in Commands.DisarmCommand.DisarmedScps)
+                foreach (var kvp in Commands.DisarmCommand.DisarmedScps.ToArray())
                 {
-                    if (Vector3.Distance(values.Key.Position, values.Value.Position) >= 30)
-                        Commands.DisarmCommand.DisarmedScps.Remove(values.Key);
+                    if (Vector3.Distance(kvp.Key.Position, kvp.Value.Position) >= 30)
+                        Commands.DisarmCommand.DisarmedScps.Remove(kvp.Key);
                 }
 
                 yield return Timing.WaitForSeconds(1);

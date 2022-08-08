@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+﻿/*// -----------------------------------------------------------------------
 // <copyright file="ContainCommand.cs" company="Mistaken">
 // Copyright (c) Mistaken. All rights reserved.
 // </copyright>
@@ -106,3 +106,4 @@ namespace Mistaken.BetterSCP.SCP049.Commands
         }
     }
 }
+*/
