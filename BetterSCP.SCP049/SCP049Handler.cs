@@ -240,7 +240,7 @@ namespace Mistaken.BetterSCP.SCP049
                     {
                         try
                         {
-                            if (ragdollObj.NetworkInfo.OwnerHub is null)
+                            if (ragdollObj.NetworkInfo.OwnerHub == null)
                                 continue;
                             if (ragdollObj.NetworkInfo.RoleType.GetTeam() == Team.SCP)
                                 continue;
