@@ -21,7 +21,7 @@ namespace Mistaken.BetterSCP.SCP049
         [Description("If true then debug will be displayed")]
         public bool VerbouseOutput { get; set; }
 
-        [Description("If true then .contain command will be enabled")]
+        [Description("If true then .disarm command will be enabled and recontamination of SCP-049 will be possible")]
         public bool Allow049Recontainment { get; set; } = false;
 
         /// <inheritdoc/>
