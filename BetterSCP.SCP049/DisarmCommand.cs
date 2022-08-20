@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq;
 using CommandSystem;
@@ -99,6 +100,7 @@ namespace Mistaken.BetterSCP.SCP049.Commands
             if (Cuffed049 != null)
                 Cuffed049.Invoke(null, (disarmer, scp049));
             alreadyRunning = false;
+            disarmer.SetGUI("disarm049", PseudoGUIPosition.MIDDLE, $"Disarming <color=green>successfull</color>", 5);
             scp049.SetGUI("disarm049", PseudoGUIPosition.MIDDLE, null);
             Timing.RunCoroutine(this.UpdateGUI(scp049, disarmer));
         }
