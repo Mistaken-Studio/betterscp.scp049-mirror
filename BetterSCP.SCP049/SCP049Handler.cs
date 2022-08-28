@@ -10,7 +10,6 @@ using System.Linq;
 using Exiled.API.Enums;
 using Exiled.API.Extensions;
 using Exiled.API.Features;
-using InventorySystem.Disarming;
 using MEC;
 using Mistaken.API.Components;
 using Mistaken.API.Diagnostics;
@@ -61,17 +60,23 @@ namespace Mistaken.BetterSCP.SCP049
         }
 
         private readonly HashSet<Player> notRecallable = new HashSet<Player>();
+        private readonly Dictionary<Player, float> scp049DamageRecievedWhileCuffed = new Dictionary<Player, float>();
 
         private void Server_RestartingRound()
         {
             Commands.DisarmCommand.DisarmedScps.Clear();
             this.notRecallable.Clear();
+            this.scp049DamageRecievedWhileCuffed.Clear();
         }
 
         private void Scp049_StartingRecall(Exiled.Events.EventArgs.StartingRecallEventArgs ev)
         {
             if (Commands.DisarmCommand.DisarmedScps.ContainsValue(ev.Scp049))
+            {
                 ev.IsAllowed = false;
+                return;
+            }
+
             if (this.notRecallable.Contains(ev.Target))
                 ev.IsAllowed = false;
         }
@@ -170,8 +175,7 @@ namespace Mistaken.BetterSCP.SCP049
                     ev.Killer.Health = ev.Killer.MaxHealth;
             }
 
-            if (Commands.DisarmCommand.DisarmedScps.ContainsKey(ev.Target))
-                Commands.DisarmCommand.DisarmedScps.Remove(ev.Target);
+            Commands.DisarmCommand.DisarmedScps.Remove(ev.Target);
 
             /*else if (ev.Killer?.Role == RoleType.Scp049)
             {
@@ -187,8 +191,7 @@ namespace Mistaken.BetterSCP.SCP049
             if (ev.NewRole != RoleType.Spectator)
                 this.notRecallable.Remove(ev.Player);
 
-            if (Commands.DisarmCommand.DisarmedScps.ContainsKey(ev.Player))
-                Commands.DisarmCommand.DisarmedScps.Remove(ev.Player);
+            Commands.DisarmCommand.DisarmedScps.Remove(ev.Player);
 
             if (ev.NewRole == RoleType.Scp049)
             {
@@ -207,7 +210,23 @@ namespace Mistaken.BetterSCP.SCP049
         private void Player_Hurting(Exiled.Events.EventArgs.HurtingEventArgs ev)
         {
             if (Commands.DisarmCommand.DisarmedScps.ContainsValue(ev.Attacker))
+            {
                 ev.IsAllowed = false;
+                return;
+            }
+
+            if (Commands.DisarmCommand.DisarmedScps.ContainsValue(ev.Target))
+            {
+                if (!this.scp049DamageRecievedWhileCuffed.ContainsKey(ev.Target))
+                    this.scp049DamageRecievedWhileCuffed.Add(ev.Target, 0f);
+                this.scp049DamageRecievedWhileCuffed[ev.Target] += ev.Amount;
+
+                if (this.scp049DamageRecievedWhileCuffed[ev.Target] > PluginHandler.Instance.Config.Scp049UncuffDamage)
+                {
+                    Commands.DisarmCommand.DisarmedScps.Remove(Commands.DisarmCommand.DisarmedScps.First(x => x.Value == ev.Target).Key);
+                    this.scp049DamageRecievedWhileCuffed[ev.Target] = 0f;
+                }
+            }
         }
 
         private void Player_InteractingElevator(Exiled.Events.EventArgs.InteractingElevatorEventArgs ev)
@@ -252,7 +271,8 @@ namespace Mistaken.BetterSCP.SCP049
 
                                 if (distance > 10f)
                                      continue;
-                                message.Add($"<color=yellow>{ragdollObj.NetworkInfo.OwnerHub.name}</color> - <color=yellow>{Mathf.RoundToInt(distance)}</color>m away - <color=yellow>{Mathf.RoundToInt(10f - ragdollObj.NetworkInfo.ExistenceTime)}</color>s");
+
+                                message.Add(string.Format(PluginHandler.Instance.Translation.PotentialZombiesListElement, ragdollObj.Owner.GetDisplayName(), Mathf.RoundToInt(distance), Mathf.RoundToInt(10f - ragdollObj.NetworkInfo.ExistenceTime)));
                             }
                         }
                         catch (System.Exception ex)
@@ -264,7 +284,7 @@ namespace Mistaken.BetterSCP.SCP049
                     }
 
                     if (message.Count != 0)
-                        scp049.SetGUI("scp049", PseudoGUIPosition.BOTTOM, $"Potential zombies:<br><br>{string.Join("<br>", message)}");
+                        scp049.SetGUI("scp049", PseudoGUIPosition.BOTTOM, string.Format(PluginHandler.Instance.Translation.PotentialZombiesListMessage, string.Join("<br>", message)));
                     else
                         scp049.SetGUI("scp049", PseudoGUIPosition.BOTTOM, null);
                 }
