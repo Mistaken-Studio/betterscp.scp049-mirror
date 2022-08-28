@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq;
 using CommandSystem;
@@ -32,7 +31,7 @@ namespace Mistaken.BetterSCP.SCP049.Commands
         /// <summary>
         /// Gets dictionary of disarmed SCP-049s.
         /// </summary>
-        public static Dictionary<Player, Player> DisarmedScps { get; internal set; } = new Dictionary<Player, Player>();
+        public static Dictionary<Player, Player> DisarmedScps { get; } = new Dictionary<Player, Player>();
 
         /// <inheritdoc/>
         public override string Command => "disarm049";
@@ -48,36 +47,36 @@ namespace Mistaken.BetterSCP.SCP049.Commands
         {
             success = false;
             if (!PluginHandler.Instance.Config.Allow049Recontainment)
-                return new string[] { "This command is disabled on this server" };
+                return new string[] { PluginHandler.Instance.Translation.DisabledCommand };
             var player = sender.GetPlayer();
             if (player.Role.Side != Exiled.API.Enums.Side.Mtf && player.Role.Team != Team.CHI)
-                return new string[] { "Only Foundation Personnel (MTF, Guards, Sciencists) or Chaos Insurgents can use this command" };
+                return new string[] { PluginHandler.Instance.Translation.WrongSideCommandInfo };
             if (this.GetCuffingLimit(player) <= this.GetCuffedPlayers(player).Count() + (DisarmedScps.ContainsKey(player) ? 1 : 0))
-                return new string[] { "You have reached your cuffing limit" };
+                return new string[] { PluginHandler.Instance.Translation.ExceededCuffingLimit };
             var scps = RealPlayers.List.Where(p => p.Role.Type == RoleType.Scp049 && Vector3.Distance(p.Position, player.Position) <= 4).ToList();
             if (scps.Count == 0)
-                return new string[] { "There is no SCP-049 nearby" };
+                return new string[] { PluginHandler.Instance.Translation.NoScpNearby };
             if (DisarmedScps.TryGetValue(player, out Player scp))
             {
                 DisarmedScps.Remove(player);
                 success = true;
-                return new string[] { "Uncuffed nearby SCP 049" };
+                return new string[] { PluginHandler.Instance.Translation.UncuffedScpCommandInfo };
             }
 
             if (alreadyRunning)
-                return new string[] { "SCP-049 is already in disarming process" };
+                return new string[] { PluginHandler.Instance.Translation.AlreadyBeingDisarmed };
             alreadyRunning = true;
             foreach (var scp049 in scps)
                 Module.RunSafeCoroutine(this.ExecuteDisarming(scp049, player), "Disarm.ExecuteDisarming");
             success = true;
-            return new string[] { "In progress" };
+            return new string[] { PluginHandler.Instance.Translation.InProgressCommandInfo };
         }
 
         private static bool alreadyRunning;
 
         private IEnumerator<float> ExecuteDisarming(Player scp049, Player disarmer)
         {
-            scp049.SetGUI("disarm049", PseudoGUIPosition.MIDDLE, "<color=red><size=150%>You are being disarmed</size></color><br>Stand still for <color=yellow>3</color>s", 5);
+            scp049.SetGUI("disarm049", PseudoGUIPosition.MIDDLE, string.Format(PluginHandler.Instance.Translation.DisarmingMessage049, 3), 5);
             yield return Timing.WaitForSeconds(1);
             Vector3 pos = scp049.Position;
             for (int i = 3; i >= 0; i--)
@@ -86,13 +85,13 @@ namespace Mistaken.BetterSCP.SCP049.Commands
                     break;
                 if (pos != scp049.Position)
                 {
-                    scp049.SetGUI("disarm049", PseudoGUIPosition.MIDDLE, $"<color=red><size=150%>Disarming canceled</size></color>", 5);
-                    disarmer.SetGUI("disarm049", PseudoGUIPosition.MIDDLE, $"<color=red><size=150%>Disarming canceled</size></color><br>SCP-049 <color=yellow>moved</color>", 5);
+                    scp049.SetGUI("disarm049", PseudoGUIPosition.MIDDLE, PluginHandler.Instance.Translation.DisarmingFailedMessage049, 5);
+                    disarmer.SetGUI("disarm049", PseudoGUIPosition.MIDDLE, PluginHandler.Instance.Translation.DisarmingFailedMessageCuffer, 5);
                     alreadyRunning = false;
                     yield break;
                 }
 
-                scp049.SetGUI("disarm049", PseudoGUIPosition.MIDDLE, $"<color=red><size=150%>You are being disarmed</size></color><br>Stand still for <color=yellow>{i}</color>s");
+                scp049.SetGUI("disarm049", PseudoGUIPosition.MIDDLE, string.Format(PluginHandler.Instance.Translation.DisarmingMessage049, i));
                 yield return Timing.WaitForSeconds(1f);
             }
 
@@ -100,7 +99,7 @@ namespace Mistaken.BetterSCP.SCP049.Commands
             if (Cuffed049 != null)
                 Cuffed049.Invoke(null, (disarmer, scp049));
             alreadyRunning = false;
-            disarmer.SetGUI("disarm049", PseudoGUIPosition.MIDDLE, $"Disarming <color=green>successfull</color>", 5);
+            disarmer.SetGUI("disarm049", PseudoGUIPosition.MIDDLE, PluginHandler.Instance.Translation.DisarmingSuccessfull, 5);
             scp049.SetGUI("disarm049", PseudoGUIPosition.MIDDLE, null);
             Timing.RunCoroutine(this.UpdateGUI(scp049, disarmer));
         }
@@ -111,7 +110,7 @@ namespace Mistaken.BetterSCP.SCP049.Commands
             {
                 if (player.IsConnected && cuffer.IsConnected && player.Role.Type == RoleType.Scp049)
                 {
-                    player.SetGUI("disarmed049gui", PseudoGUIPosition.MIDDLE, $"<br><br><size=200%><color=red>You are disarmed!</color></size><br>Your cuffer is: <color=yellow>{cuffer.Nickname}</color><br>Follow orders!");
+                    player.SetGUI("disarmed049gui", PseudoGUIPosition.MIDDLE, string.Format(PluginHandler.Instance.Translation.DisarmedInformation049, cuffer.GetDisplayName()));
                     if (Vector3.Distance(player.Position, cuffer.Position) >= 30)
                         DisarmedScps.Remove(cuffer);
                 }

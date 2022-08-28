@@ -57,7 +57,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ContainCommand.cs" />
     <Compile Include="DisarmCommand.cs" />
     <Compile Include="PluginHandler.cs" />
     <Compile Include="Config.cs" />
