@@ -131,30 +131,19 @@ namespace Mistaken.BetterSCP.SCP049
                 player.SetGUI("recontain049", PseudoGUIPosition.MIDDLE, null);
                 cuffer.SetGUI("recontain049", PseudoGUIPosition.MIDDLE, null);
 
-                player.SetRole(cuffer.Role.Team == Team.CHI ? RoleType.ChaosConscript : RoleType.NtfSpecialist, reason: SpawnReason.Escaped, lite: true);
-                string recontainerName;
+                player.SetRole(cuffer.Role.Team == Team.CHI ? RoleType.ChaosConscript : RoleType.NtfSpecialist, SpawnReason.Escaped, true);
+                string recontainerName = "Unspecified";
                 if (cuffer.Role.Team == Team.CHI)
-                    recontainerName = "CHAOS INSURGENCY";
+                    recontainerName = "Chaos Insurgency";
                 else if (cuffer.Role.Type == RoleType.Scientist)
-                    recontainerName = "SCIENCE PERSONNEL";
+                    recontainerName = "Science Personnel";
                 else
                 {
-                    string unit = cuffer.ReferenceHub.characterClassManager.CurUnitName;
-                    if (unit.StartsWith("<color="))
-                        unit = unit.Split('>')[1].Split('<')[0].Trim();
-                    try
-                    {
-                        string[] array = unit.Split('-');
-                        recontainerName = "UNIT NATO_" + array[0][0].ToString() + " " + array[1];
-                    }
-                    catch
-                    {
-                        global::ServerConsole.AddLog("Error, couldn't convert '" + unit + "' into a CASSIE-readable form.", ConsoleColor.Gray);
-                        recontainerName = "UNKNOWN";
-                    }
+                    if (Respawning.NamingRules.UnitNamingRules.AllNamingRules.TryGetValue(Respawning.SpawnableTeamType.NineTailedFox, out var rule))
+                        recontainerName = $"Unit {rule.GetCassieUnitName(cuffer.UnitName)}";
                 }
 
-                Cassie.Message($"SCP 0 4 9 recontained successfully by {recontainerName}");
+                Cassie.MessageTranslated($"SCP 0 4 9 RECONTAINED SUCCESSFULLY BY {recontainerName.ToUpper()}", $"SCP-049 recontained successfully by {recontainerName}");
             }
 
             if (PluginHandler.Instance.Config.Allow049Recontainment)
