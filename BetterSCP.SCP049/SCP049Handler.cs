@@ -4,7 +4,6 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using Exiled.API.Enums;
@@ -15,16 +14,16 @@ using Mistaken.API.Components;
 using Mistaken.API.Diagnostics;
 using Mistaken.API.Extensions;
 using Mistaken.API.GUI;
+using Mistaken.API.Shield;
 using UnityEngine;
 
 namespace Mistaken.BetterSCP.SCP049
 {
-    internal class SCP049Handler : Module
+    internal sealed class SCP049Handler : Module
     {
         public SCP049Handler(PluginHandler p)
             : base(p)
         {
-            // plugin.RegisterTranslation("scp049_start_message", "<color=red><b><size=500%>UWAGA</size></b></color><br><br><br><br><br><br><size=90%>Rozgrywka jako <color=red>SCP 049</color> na tym serwerze jest zmodyfikowana, <color=red>SCP 049</color> posiada domyślnie dodatkowe <color=yellow>60</color> ahp, każdy <color=red>SCP 049-2</color> w zasięgu <color=yellow>10</color> metrów dodaje +<color=yellow>100</color> do max ahp, ahp regeneruje się z prędkością <color=yellow>20</color> na sekundę pod warunkiem że jest <color=yellow>bezpieczny</color>(w ciągu ostatnich <color=yellow>10</color> sekund nie otrzymał obrażeń)</size>");
         }
 
         public override string Name => nameof(SCP049Handler);
@@ -59,14 +58,64 @@ namespace Mistaken.BetterSCP.SCP049
             Exiled.Events.Handlers.Server.RoundStarted -= this.Server_RoundStarted;
         }
 
-        private readonly HashSet<Player> notRecallable = new HashSet<Player>();
-        private readonly Dictionary<Player, float> scp049DamageRecievedWhileCuffed = new Dictionary<Player, float>();
+        private static readonly HashSet<Player> _alreadyRunning = new();
+        private static readonly HashSet<Player> _notRecallable = new();
+        private static readonly Dictionary<Player, float> _scp049DamageRecievedWhileCuffed = new();
+
+        private static IEnumerator<float> Handler(Player player, Player[] playersInRange)
+        {
+            _alreadyRunning.Add(player);
+            var cuffer = Commands.DisarmCommand.DisarmedScps.First(x => x.Value == player).Key;
+
+            for (int i = 4; i > 0; i--)
+            {
+                if (!player.IsConnected())
+                    yield break;
+
+                if (!playersInRange.Contains(player))
+                {
+                    _alreadyRunning.Remove(player);
+                    player.SetGUI("recontain049", PseudoGUIPosition.MIDDLE, PluginHandler.Instance.Translation.ContainingFailedMessage049, 5);
+                    cuffer.SetGUI("recontain049", PseudoGUIPosition.MIDDLE, PluginHandler.Instance.Translation.ContainingFailedMessageCuffer, 5);
+                    yield break;
+                }
+
+                player.SetGUI("recontain049", PseudoGUIPosition.MIDDLE, string.Format(PluginHandler.Instance.Translation.ContainingMessage049, i));
+                cuffer.SetGUI("recontain049", PseudoGUIPosition.MIDDLE, string.Format(PluginHandler.Instance.Translation.ContainingMessageCuffer, i));
+                yield return Timing.WaitForSeconds(1);
+            }
+
+            if (Commands.DisarmCommand.DisarmedScps.ContainsValue(player))
+                Commands.DisarmCommand.DisarmedScps.Remove(cuffer);
+
+            _alreadyRunning.Remove(player);
+            player.SetGUI("recontain049", PseudoGUIPosition.MIDDLE, null);
+            cuffer.SetGUI("recontain049", PseudoGUIPosition.MIDDLE, null);
+
+            player.SetRole(cuffer.Role.Team == Team.CHI ? RoleType.ChaosConscript : RoleType.NtfSpecialist, SpawnReason.Escaped, true);
+            string recontainerName = "Unspecified";
+            if (cuffer.Role.Team == Team.CHI)
+                recontainerName = "Chaos Insurgency";
+            else if (cuffer.Role.Type == RoleType.Scientist)
+                recontainerName = "Science Personnel";
+            else
+            {
+                if (Respawning.NamingRules.UnitNamingRules.AllNamingRules.TryGetValue(Respawning.SpawnableTeamType.NineTailedFox, out var rule))
+                    recontainerName = $"Unit {rule.GetCassieUnitName(cuffer.UnitName)}";
+            }
+
+            Cassie.MessageTranslated($"SCP 0 4 9 RECONTAINED SUCCESSFULLY BY {recontainerName.ToUpper()}", $"SCP-049 recontained successfully by {recontainerName}");
+
+            yield return Timing.WaitForSeconds(1);
+            Recontainer.Recontain();
+        }
 
         private void Server_RestartingRound()
         {
             Commands.DisarmCommand.DisarmedScps.Clear();
-            this.notRecallable.Clear();
-            this.scp049DamageRecievedWhileCuffed.Clear();
+            _notRecallable.Clear();
+            _scp049DamageRecievedWhileCuffed.Clear();
+            _alreadyRunning.Clear();
         }
 
         private void Scp049_StartingRecall(Exiled.Events.EventArgs.StartingRecallEventArgs ev)
@@ -77,7 +126,7 @@ namespace Mistaken.BetterSCP.SCP049
                 return;
             }
 
-            if (this.notRecallable.Contains(ev.Target))
+            if (_notRecallable.Contains(ev.Target))
                 ev.IsAllowed = false;
         }
 
@@ -88,68 +137,33 @@ namespace Mistaken.BetterSCP.SCP049
 
             if (ev.Target.IsScp)
             {
-                this.notRecallable.Add(ev.Target);
-                Timing.CallDelayed(30, () => this.notRecallable.Remove(ev.Target));
+                _notRecallable.Add(ev.Target);
+                Timing.CallDelayed(30, () => _notRecallable.Remove(ev.Target));
             }
         }
 
         private void Server_RoundStarted()
         {
-            // Scp049 Recontainment
             InRange inRange = null;
-            List<Player> alreadyRunning = new List<Player>();
-            IEnumerator<float> Handler(Player player)
+
+            void HandleInRange(Player player)
             {
-                if (alreadyRunning.Contains(player))
-                    yield break;
-                if (player.Role.Type != RoleType.Scp049 || !Commands.DisarmCommand.DisarmedScps.ContainsValue(player))
-                    yield break;
-                alreadyRunning.Add(player);
-                var cuffer = Commands.DisarmCommand.DisarmedScps.First(x => x.Value == player).Key;
-                for (int i = 4; i > 0; i--)
-                {
-                    if (!player.IsConnected)
-                        yield break;
+                if (player.Role.Type != RoleType.Scp049)
+                    return;
 
-                    if (!inRange.ColliderInArea.Select(x => Player.Get(x)).Contains(player))
-                    {
-                        alreadyRunning.Remove(player);
-                        player.SetGUI("recontain049", PseudoGUIPosition.MIDDLE, PluginHandler.Instance.Translation.ContainingFailedMessage049, 5);
-                        cuffer.SetGUI("recontain049", PseudoGUIPosition.MIDDLE, PluginHandler.Instance.Translation.ContainingFailedMessageCuffer, 5);
-                        yield break;
-                    }
+                if (_alreadyRunning.Contains(player))
+                    return;
 
-                    player.SetGUI("recontain049", PseudoGUIPosition.MIDDLE, string.Format(PluginHandler.Instance.Translation.ContainingMessage049, i));
-                    cuffer.SetGUI("recontain049", PseudoGUIPosition.MIDDLE, string.Format(PluginHandler.Instance.Translation.ContainingMessageCuffer, i));
-                    yield return Timing.WaitForSeconds(1);
-                }
+                if (!Commands.DisarmCommand.DisarmedScps.ContainsValue(player))
+                    return;
 
-                if (Commands.DisarmCommand.DisarmedScps.ContainsValue(player))
-                    Commands.DisarmCommand.DisarmedScps.Remove(cuffer);
-
-                alreadyRunning.Remove(player);
-                player.SetGUI("recontain049", PseudoGUIPosition.MIDDLE, null);
-                cuffer.SetGUI("recontain049", PseudoGUIPosition.MIDDLE, null);
-
-                player.SetRole(cuffer.Role.Team == Team.CHI ? RoleType.ChaosConscript : RoleType.NtfSpecialist, SpawnReason.Escaped, true);
-                string recontainerName = "Unspecified";
-                if (cuffer.Role.Team == Team.CHI)
-                    recontainerName = "Chaos Insurgency";
-                else if (cuffer.Role.Type == RoleType.Scientist)
-                    recontainerName = "Science Personnel";
-                else
-                {
-                    if (Respawning.NamingRules.UnitNamingRules.AllNamingRules.TryGetValue(Respawning.SpawnableTeamType.NineTailedFox, out var rule))
-                        recontainerName = $"Unit {rule.GetCassieUnitName(cuffer.UnitName)}";
-                }
-
-                Cassie.MessageTranslated($"SCP 0 4 9 RECONTAINED SUCCESSFULLY BY {recontainerName.ToUpper()}", $"SCP-049 recontained successfully by {recontainerName}");
+                this.RunCoroutine(Handler(player, inRange.ColliderInArea.Select(x => Player.Get(x)).Where(x => x != null).ToArray()));
             }
 
             if (PluginHandler.Instance.Config.Allow049Recontainment)
             {
                 var scp049Chamber = Room.List.First(x => x.Type == RoomType.Hcz049).Transform;
-                inRange = InRange.Spawn(scp049Chamber, new Vector3(0f, 266.5f, 14f), new Vector3(20f, 5f, 6f), (Player p) => this.RunCoroutine(Handler(p)));
+                inRange = InRange.Spawn(scp049Chamber, new Vector3(0f, 266.5f, 14f), new Vector3(20f, 5f, 6f), (Player p) => HandleInRange(p));
             }
         }
 
@@ -165,11 +179,6 @@ namespace Mistaken.BetterSCP.SCP049
             }
 
             Commands.DisarmCommand.DisarmedScps.Remove(ev.Target);
-
-            /*else if (ev.Killer?.Role == RoleType.Scp049)
-            {
-                ev.Killer.ArtificialHealth += 50;
-            }*/
         }
 
         private void Player_ChangingRole(Exiled.Events.EventArgs.ChangingRoleEventArgs ev)
@@ -178,18 +187,18 @@ namespace Mistaken.BetterSCP.SCP049
                 return;
 
             if (ev.NewRole != RoleType.Spectator)
-                this.notRecallable.Remove(ev.Player);
+                _notRecallable.Remove(ev.Player);
 
             Commands.DisarmCommand.DisarmedScps.Remove(ev.Player);
 
             if (ev.NewRole == RoleType.Scp049)
             {
-                Timing.RunCoroutine(this.UpdateInfo(ev.Player), "Handler.UpdateInfo");
-                Timing.CallDelayed(1, () =>
+                Timing.RunCoroutine(this.UpdateInfo(ev.Player), nameof(this.UpdateInfo));
+                Timing.CallDelayed(1f, () =>
                 {
                     if (ev.IsAllowed && ev.NewRole == RoleType.Scp049 && ev.Player.Role.Type == RoleType.Scp049)
                     {
-                        SCP049Shield.Ini<SCP049Shield>(ev.Player);
+                        Shield.Ini<SCP049Shield>(ev.Player);
                         ev.Player.ArtificialHealth = 20f;
                     }
                 });
@@ -198,6 +207,9 @@ namespace Mistaken.BetterSCP.SCP049
 
         private void Player_Hurting(Exiled.Events.EventArgs.HurtingEventArgs ev)
         {
+            if (ev.Attacker.Role.Type != RoleType.Scp049 && ev.Target.Role.Type != RoleType.Scp049)
+                return;
+
             if (Commands.DisarmCommand.DisarmedScps.ContainsValue(ev.Attacker))
             {
                 ev.IsAllowed = false;
@@ -206,26 +218,33 @@ namespace Mistaken.BetterSCP.SCP049
 
             if (Commands.DisarmCommand.DisarmedScps.ContainsValue(ev.Target))
             {
-                if (!this.scp049DamageRecievedWhileCuffed.ContainsKey(ev.Target))
-                    this.scp049DamageRecievedWhileCuffed.Add(ev.Target, 0f);
-                this.scp049DamageRecievedWhileCuffed[ev.Target] += ev.Amount;
+                if (!_scp049DamageRecievedWhileCuffed.ContainsKey(ev.Target))
+                    _scp049DamageRecievedWhileCuffed.Add(ev.Target, 0f);
 
-                if (this.scp049DamageRecievedWhileCuffed[ev.Target] > PluginHandler.Instance.Config.Scp049UncuffDamage)
+                _scp049DamageRecievedWhileCuffed[ev.Target] += ev.Amount;
+
+                if (_scp049DamageRecievedWhileCuffed[ev.Target] > PluginHandler.Instance.Config.Scp049UncuffDamage)
                 {
                     Commands.DisarmCommand.DisarmedScps.Remove(Commands.DisarmCommand.DisarmedScps.First(x => x.Value == ev.Target).Key);
-                    this.scp049DamageRecievedWhileCuffed[ev.Target] = 0f;
+                    _scp049DamageRecievedWhileCuffed[ev.Target] = 0f;
                 }
             }
         }
 
         private void Player_InteractingElevator(Exiled.Events.EventArgs.InteractingElevatorEventArgs ev)
         {
+            if (ev.Player.Role.Type != RoleType.Scp049)
+                return;
+
             if (Commands.DisarmCommand.DisarmedScps.ContainsValue(ev.Player))
                 ev.IsAllowed = false;
         }
 
         private void Player_InteractingDoor(Exiled.Events.EventArgs.InteractingDoorEventArgs ev)
         {
+            if (ev.Player.Role.Type != RoleType.Scp049)
+                return;
+
             if (Commands.DisarmCommand.DisarmedScps.ContainsValue(ev.Player))
                 ev.IsAllowed = false;
         }
@@ -243,19 +262,22 @@ namespace Mistaken.BetterSCP.SCP049
 
                 try
                 {
-                    List<string> message = new List<string>();
+                    List<string> message = new();
                     foreach (var ragdollObj in Map.Ragdolls.ToArray())
                     {
                         try
                         {
                             if (ragdollObj.NetworkInfo.OwnerHub == null)
                                 continue;
+
                             if (ragdollObj.NetworkInfo.RoleType.GetTeam() == Team.SCP)
                                 continue;
+
                             if (ragdollObj.NetworkInfo.ExistenceTime < 10f)
                             {
                                 if (ragdollObj.Base == null)
                                     continue;
+
                                 var distance = Vector3.Distance(scp049.Position, ragdollObj.Base.transform.position);
 
                                 if (distance > 10f)

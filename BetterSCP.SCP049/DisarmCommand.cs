@@ -20,7 +20,7 @@ using UnityEngine;
 namespace Mistaken.BetterSCP.SCP049.Commands
 {
     /// <inheritdoc/>
-    [CommandSystem.CommandHandler(typeof(CommandSystem.ClientCommandHandler))]
+    [CommandHandler(typeof(ClientCommandHandler))]
     public class DisarmCommand : IBetterCommand
     {
         /// <summary>
@@ -31,7 +31,7 @@ namespace Mistaken.BetterSCP.SCP049.Commands
         /// <summary>
         /// Gets dictionary of disarmed SCP-049s.
         /// </summary>
-        public static Dictionary<Player, Player> DisarmedScps { get; } = new Dictionary<Player, Player>();
+        public static Dictionary<Player, Player> DisarmedScps { get; } = new();
 
         /// <inheritdoc/>
         public override string Command => "disarm049";
@@ -48,14 +48,18 @@ namespace Mistaken.BetterSCP.SCP049.Commands
             success = false;
             if (!PluginHandler.Instance.Config.Allow049Recontainment)
                 return new string[] { PluginHandler.Instance.Translation.DisabledCommand };
-            var player = sender.GetPlayer();
+
+            var player = Player.Get(sender);
             if (player.Role.Side != Exiled.API.Enums.Side.Mtf && player.Role.Team != Team.CHI)
                 return new string[] { PluginHandler.Instance.Translation.WrongSideCommandInfo };
+
             if (this.GetCuffingLimit(player) <= this.GetCuffedPlayers(player).Count() + (DisarmedScps.ContainsKey(player) ? 1 : 0))
                 return new string[] { PluginHandler.Instance.Translation.ExceededCuffingLimit };
+
             var scps = RealPlayers.List.Where(p => p.Role.Type == RoleType.Scp049 && Vector3.Distance(p.Position, player.Position) <= 4).ToList();
             if (scps.Count == 0)
                 return new string[] { PluginHandler.Instance.Translation.NoScpNearby };
+
             if (DisarmedScps.TryGetValue(player, out Player scp))
             {
                 DisarmedScps.Remove(player);
@@ -65,9 +69,11 @@ namespace Mistaken.BetterSCP.SCP049.Commands
 
             if (alreadyRunning)
                 return new string[] { PluginHandler.Instance.Translation.AlreadyBeingDisarmed };
+
             alreadyRunning = true;
             foreach (var scp049 in scps)
                 Module.RunSafeCoroutine(this.ExecuteDisarming(scp049, player), "Disarm.ExecuteDisarming");
+
             success = true;
             return new string[] { PluginHandler.Instance.Translation.InProgressCommandInfo };
         }
@@ -79,10 +85,12 @@ namespace Mistaken.BetterSCP.SCP049.Commands
             scp049.SetGUI("disarm049", PseudoGUIPosition.MIDDLE, string.Format(PluginHandler.Instance.Translation.DisarmingMessage049, 3), 5);
             yield return Timing.WaitForSeconds(1);
             Vector3 pos = scp049.Position;
+
             for (int i = 3; i >= 0; i--)
             {
-                if (!scp049.IsConnected)
+                if (!scp049.IsConnected())
                     break;
+
                 if (pos != scp049.Position)
                 {
                     scp049.SetGUI("disarm049", PseudoGUIPosition.MIDDLE, PluginHandler.Instance.Translation.DisarmingFailedMessage049, 5);
@@ -98,6 +106,7 @@ namespace Mistaken.BetterSCP.SCP049.Commands
             DisarmedScps.Add(disarmer, scp049);
             if (Cuffed049 != null)
                 Cuffed049.Invoke(null, (disarmer, scp049));
+
             alreadyRunning = false;
             disarmer.SetGUI("disarm049", PseudoGUIPosition.MIDDLE, PluginHandler.Instance.Translation.DisarmingSuccessfull, 5);
             scp049.SetGUI("disarm049", PseudoGUIPosition.MIDDLE, null);
@@ -108,7 +117,7 @@ namespace Mistaken.BetterSCP.SCP049.Commands
         {
             while (DisarmedScps.ContainsValue(player))
             {
-                if (player.IsConnected && cuffer.IsConnected && player.Role.Type == RoleType.Scp049)
+                if (player.IsConnected() && cuffer.IsConnected() && player.Role.Type == RoleType.Scp049)
                 {
                     player.SetGUI("disarmed049gui", PseudoGUIPosition.MIDDLE, string.Format(PluginHandler.Instance.Translation.DisarmedInformation049, cuffer.GetDisplayName()));
                     if (Vector3.Distance(player.Position, cuffer.Position) >= 30)
