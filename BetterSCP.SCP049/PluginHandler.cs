@@ -5,32 +5,30 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Reflection;
 using Exiled.API.Enums;
 using Exiled.API.Features;
-using HarmonyLib;
+using Mistaken.Updater.API.Config;
 
 namespace Mistaken.BetterSCP.SCP049
 {
-    /// <inheritdoc/>
-    internal class PluginHandler : Plugin<Config, Translation>
+    internal sealed class PluginHandler : Plugin<Config, Translation>, IAutoUpdateablePlugin
     {
-        /// <inheritdoc/>
         public override string Author => "Mistaken Devs";
 
-        /// <inheritdoc/>
         public override string Name => "BetterSCP-SCP049";
 
-        /// <inheritdoc/>
         public override string Prefix => "MBSCP-049";
 
-        /// <inheritdoc/>
         public override PluginPriority Priority => PluginPriority.Default;
 
-        /// <inheritdoc/>
-        public override Version RequiredExiledVersion => new Version(5, 0, 0);
+        public override Version RequiredExiledVersion => new(5, 2, 2);
 
-        /// <inheritdoc/>
+        public AutoUpdateConfig AutoUpdateConfig => new()
+        {
+            Type = SourceType.GITLAB,
+            Url = "https://git.mistaken.pl/api/v4/projects/56",
+        };
+
         public override void OnEnabled()
         {
             Instance = this;
@@ -42,7 +40,6 @@ namespace Mistaken.BetterSCP.SCP049
             base.OnEnabled();
         }
 
-        /// <inheritdoc/>
         public override void OnDisabled()
         {
             API.Diagnostics.Module.OnDisable(this);
