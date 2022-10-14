@@ -207,9 +207,6 @@ namespace Mistaken.BetterSCP.SCP049
 
         private void Player_Hurting(Exiled.Events.EventArgs.HurtingEventArgs ev)
         {
-            if (ev.Attacker.Role.Type != RoleType.Scp049 && ev.Target.Role.Type != RoleType.Scp049)
-                return;
-
             if (Commands.DisarmCommand.DisarmedScps.ContainsValue(ev.Attacker))
             {
                 ev.IsAllowed = false;
