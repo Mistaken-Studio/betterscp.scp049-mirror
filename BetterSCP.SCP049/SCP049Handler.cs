@@ -101,10 +101,10 @@ namespace Mistaken.BetterSCP.SCP049
             else
             {
                 if (Respawning.NamingRules.UnitNamingRules.AllNamingRules.TryGetValue(Respawning.SpawnableTeamType.NineTailedFox, out var rule))
-                    recontainerName = $"Unit {rule.GetCassieUnitName(cuffer.UnitName)}";
+                    recontainerName = $"UNIT {rule.GetCassieUnitName(cuffer.UnitName)}";
             }
 
-            Cassie.MessageTranslated($"SCP 0 4 9 RECONTAINED SUCCESSFULLY BY {recontainerName.ToUpper()}", $"SCP-049 recontained successfully by {recontainerName}");
+            Cassie.MessageTranslated($"SCP 0 4 9 RECONTAINED SUCCESSFULLY BY {recontainerName}", $"SCP-049 recontained successfully by Unit {cuffer.UnitName}");
 
             yield return Timing.WaitForSeconds(1);
             Recontainer.Recontain();
