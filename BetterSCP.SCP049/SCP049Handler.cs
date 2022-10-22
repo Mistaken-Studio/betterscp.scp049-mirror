@@ -10,6 +10,7 @@ using Exiled.API.Enums;
 using Exiled.API.Extensions;
 using Exiled.API.Features;
 using MEC;
+using Mistaken.API;
 using Mistaken.API.Components;
 using Mistaken.API.Diagnostics;
 using Mistaken.API.Extensions;
@@ -105,9 +106,11 @@ namespace Mistaken.BetterSCP.SCP049
             }
 
             Cassie.MessageTranslated($"SCP 0 4 9 RECONTAINED SUCCESSFULLY BY {recontainerName}", $"SCP-049 recontained successfully by Unit {cuffer.UnitName}");
-
             yield return Timing.WaitForSeconds(1);
-            Recontainer.Recontain();
+
+            var scps = RealPlayers.Get(Team.SCP).ToArray();
+            if (scps.Length == 1 && scps[0].Role.Type == RoleType.Scp079)
+                Recontainer.Recontain();
         }
 
         private void Server_RestartingRound()
