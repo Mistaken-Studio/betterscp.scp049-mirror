@@ -21,7 +21,7 @@ namespace Mistaken.BetterSCP.SCP049.Commands
 {
     /// <inheritdoc/>
     [CommandHandler(typeof(ClientCommandHandler))]
-    public class DisarmCommand : IBetterCommand
+    public sealed class DisarmCommand : IBetterCommand
     {
         /// <summary>
         /// Event that's fired when SCP-049 is getting cuffed;
@@ -46,10 +46,12 @@ namespace Mistaken.BetterSCP.SCP049.Commands
         public override string[] Execute(ICommandSender sender, string[] args, out bool success)
         {
             success = false;
+
             if (!PluginHandler.Instance.Config.Allow049Recontainment)
                 return new string[] { PluginHandler.Instance.Translation.DisabledCommand };
 
             var player = Player.Get(sender);
+
             if (player.Role.Side != Exiled.API.Enums.Side.Mtf && player.Role.Team != Team.CHI)
                 return new string[] { PluginHandler.Instance.Translation.WrongSideCommandInfo };
 
@@ -57,6 +59,7 @@ namespace Mistaken.BetterSCP.SCP049.Commands
                 return new string[] { PluginHandler.Instance.Translation.ExceededCuffingLimit };
 
             var scps = RealPlayers.List.Where(p => p.Role.Type == RoleType.Scp049 && Vector3.Distance(p.Position, player.Position) <= 4).ToList();
+
             if (scps.Count == 0)
                 return new string[] { PluginHandler.Instance.Translation.NoScpNearby };
 
@@ -71,6 +74,7 @@ namespace Mistaken.BetterSCP.SCP049.Commands
                 return new string[] { PluginHandler.Instance.Translation.AlreadyBeingDisarmed };
 
             alreadyRunning = true;
+
             foreach (var scp049 in scps)
                 Module.RunSafeCoroutine(this.ExecuteDisarming(scp049, player), "Disarm.ExecuteDisarming");
 
@@ -104,6 +108,7 @@ namespace Mistaken.BetterSCP.SCP049.Commands
             }
 
             DisarmedScps.Add(disarmer, scp049);
+
             if (Cuffed049 != null)
                 Cuffed049.Invoke(null, (disarmer, scp049));
 
@@ -140,11 +145,12 @@ namespace Mistaken.BetterSCP.SCP049.Commands
             ushort limit = 0;
 
             if (cuffer.HasItem(ItemType.ArmorLight))
-                limit = 1;
+                limit = 2;
             else if (cuffer.HasItem(ItemType.ArmorCombat))
                 limit = 2;
             else if (cuffer.HasItem(ItemType.ArmorHeavy))
                 limit = 4;
+
             return limit;
         }
     }

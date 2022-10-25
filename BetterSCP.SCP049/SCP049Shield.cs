@@ -52,19 +52,23 @@ namespace Mistaken.BetterSCP.SCP049
             {
                 int maxShield = 200;
                 HashSet<Player> inRange = new();
+
                 foreach (var zombie in Physics.OverlapSphere(this.Player.Position, 10))
                 {
                     try
                     {
                         var zombiePlayer = Player.Get(zombie.transform.root.gameObject);
+
                         if (inRange.Contains(zombiePlayer))
                             continue;
 
                         inRange.Add(zombiePlayer);
+
                         if (zombiePlayer == null || zombiePlayer.Role != RoleType.Scp0492)
                             continue;
 
                         maxShield += SCP049MaxShieldPerZombie;
+
                         if (zombiePlayer.MaxHealth > zombiePlayer.Health)
                             zombiePlayer.Health = Math.Min(zombiePlayer.MaxHealth, zombiePlayer.Health + SCP0492Regeneration);
                     }
