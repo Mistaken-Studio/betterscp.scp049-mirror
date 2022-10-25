@@ -9,12 +9,12 @@ using Exiled.API.Interfaces;
 
 namespace Mistaken.BetterSCP.SCP049
 {
-    internal class Config : IConfig
+    internal sealed class Config : IConfig
     {
         public bool IsEnabled { get; set; } = true;
 
         [Description("If true then debug will be displayed")]
-        public bool VerbouseOutput { get; set; }
+        public bool VerboseOutput { get; set; }
 
         [Description("If true then .disarm command will be enabled and recontamination of SCP-049 will be possible")]
         public bool Allow049Recontainment { get; set; } = false;

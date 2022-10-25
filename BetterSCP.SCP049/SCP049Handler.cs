@@ -95,6 +95,7 @@ namespace Mistaken.BetterSCP.SCP049
 
             player.SetRole(cuffer.Role.Team == Team.CHI ? RoleType.ChaosConscript : RoleType.NtfSpecialist, SpawnReason.Escaped, true);
             string recontainerName = "Unspecified";
+
             if (cuffer.Role.Team == Team.CHI)
                 recontainerName = "Chaos Insurgency";
             else if (cuffer.Role.Type == RoleType.Scientist)
@@ -109,6 +110,7 @@ namespace Mistaken.BetterSCP.SCP049
             yield return Timing.WaitForSeconds(1);
 
             var scps = RealPlayers.Get(Team.SCP).ToArray();
+
             if (scps.Length == 1 && scps[0].Role.Type == RoleType.Scp079)
                 Recontainer.Recontain();
         }
@@ -252,6 +254,7 @@ namespace Mistaken.BetterSCP.SCP049
         private IEnumerator<float> UpdateInfo(Player scp049)
         {
             yield return Timing.WaitForSeconds(1);
+
             while (scp049.IsConnected && scp049.Role.Type == RoleType.Scp049)
             {
                 if (Commands.DisarmCommand.DisarmedScps.ContainsValue(scp049))
@@ -283,7 +286,12 @@ namespace Mistaken.BetterSCP.SCP049
                                 if (distance > 10f)
                                      continue;
 
-                                message.Add(string.Format(PluginHandler.Instance.Translation.PotentialZombiesListElement, ragdollObj.Owner.GetDisplayName(), Mathf.RoundToInt(distance), Mathf.RoundToInt(10f - ragdollObj.NetworkInfo.ExistenceTime)));
+                                message.Add(
+                                    string.Format(
+                                        PluginHandler.Instance.Translation.PotentialZombiesListElement,
+                                        ragdollObj.Owner.GetDisplayName(),
+                                        Mathf.RoundToInt(distance),
+                                        Mathf.RoundToInt(10f - ragdollObj.NetworkInfo.ExistenceTime)));
                             }
                         }
                         catch (System.Exception ex)
@@ -295,7 +303,12 @@ namespace Mistaken.BetterSCP.SCP049
                     }
 
                     if (message.Count != 0)
-                        scp049.SetGUI("scp049", PseudoGUIPosition.BOTTOM, string.Format(PluginHandler.Instance.Translation.PotentialZombiesListMessage, string.Join("<br>", message)));
+                    {
+                        scp049.SetGUI(
+                            "scp049",
+                            PseudoGUIPosition.BOTTOM,
+                            string.Format(PluginHandler.Instance.Translation.PotentialZombiesListMessage, string.Join("<br>", message)));
+                    }
                     else
                         scp049.SetGUI("scp049", PseudoGUIPosition.BOTTOM, null);
                 }
